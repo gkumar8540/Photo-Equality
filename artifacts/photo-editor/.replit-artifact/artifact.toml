@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Photo Editor"
+description = "A browser-only photo editing workspace with live Canvas previews, adjustable image controls, filters, crop and rotate tools, and high-quality downloads."
+version = "1.0.0"
+id = "artifacts/photo-editor"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23806
+
+[services.development]
+run = "pnpm --filter @workspace/photo-editor run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/photo-editor", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/photo-editor/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23806"
+BASE_PATH = "/"
