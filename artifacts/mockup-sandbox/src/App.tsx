@@ -2,6 +2,14 @@ import { useEffect, useState, type ComponentType } from "react";
 
 import { modules as discoveredModules } from "./.generated/mockup-components";
 
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      [elementName: string]: any;
+    }
+  }
+}
+
 type ModuleMap = Record<string, () => Promise<Record<string, unknown>>>;
 
 function _resolveComponent(
@@ -108,7 +116,19 @@ function Gallery() {
         </p>
         <p className="text-sm text-gray-400">
           Access component previews at{" "}
-          <code className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600">
+          <code
+            className="bg-gray-100 px-1.5 py-0.5 rounded text-gray-600"
+            style={{
+              display: "inline-block",
+              textDecoration: "none",
+              WebkitTextDecorationLine: "none",
+              textUnderlineOffset: "0",
+              textDecorationLine: "none",
+              textDecorationColor: "transparent",
+              borderBottom: "none",
+              boxShadow: "none",
+            }}
+          >
             {getPreviewExamplePath()}
           </code>
         </p>

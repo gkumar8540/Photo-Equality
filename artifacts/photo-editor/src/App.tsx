@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
+import logo from '../../images/logoe.jpeg';
 import {
   ArrowUpRight,
   Focus,
@@ -32,6 +33,8 @@ type Controls = {
   filter: FilterName;
   intensity: number;
 };
+
+const MAX_CANVAS_DIMENSION = 8192;
 
 const defaultControls: Controls = {
   brightness: 0,
@@ -87,7 +90,7 @@ function EmptyArtwork() {
       </svg>
       <div className="absolute bottom-9 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap font-mono text-[10px] uppercase tracking-[.2em] text-[#aeb2b0]/40">
         <span className="h-1.5 w-1.5 rounded-full bg-[#e8a45d]" />
-        Local canvas workspace
+        Prince Kumar workspace
       </div>
     </div>
   );
@@ -177,8 +180,11 @@ function PhotoEditor() {
     image.onload = () => {
       const rotated = document.createElement('canvas');
       const quarterTurn = rotation % 180 !== 0;
-      rotated.width = quarterTurn ? image.naturalHeight : image.naturalWidth;
-      rotated.height = quarterTurn ? image.naturalWidth : image.naturalHeight;
+      const scale = Math.min(1, MAX_CANVAS_DIMENSION / Math.max(image.naturalWidth, image.naturalHeight));
+      const sourceWidth = Math.max(1, Math.round(image.naturalWidth * scale));
+      const sourceHeight = Math.max(1, Math.round(image.naturalHeight * scale));
+      rotated.width = quarterTurn ? sourceHeight : sourceWidth;
+      rotated.height = quarterTurn ? sourceWidth : sourceHeight;
       const rotatedContext = rotated.getContext('2d');
       if (!rotatedContext) return;
       rotatedContext.save();
@@ -192,7 +198,7 @@ function PhotoEditor() {
         rotatedContext.translate(0, rotated.height);
         rotatedContext.rotate(-Math.PI / 2);
       }
-      rotatedContext.drawImage(image, 0, 0);
+      rotatedContext.drawImage(image, 0, 0, sourceWidth, sourceHeight);
       rotatedContext.restore();
 
       const crop = appliedCrop ?? { x: 0, y: 0, w: 1, h: 1 };
@@ -320,13 +326,18 @@ function PhotoEditor() {
     <main className="min-h-[100dvh] bg-[#111419] text-[#ede7db]">
       <header className="flex min-h-[72px] items-center justify-between border-b border-[#282e35] bg-[#15181d] px-4 py-3 sm:px-7">
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[10px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
-            <Sparkles size={18} strokeWidth={2.5} />
-          </div>
+        
+<div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
+  <img
+    src={logo}
+    alt="Logo"
+    className="h-full w-full object-cover"/>
+</div>
+
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Luma local</h1>
-              <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>
+              <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Moto-EQuality</h1>
+              <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Baby</span>
             </div>
             <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
           </div>
@@ -338,7 +349,7 @@ function PhotoEditor() {
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} data-testid="input-file" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button flex items-center gap-2 rounded-lg bg-[#f1ae62] px-3.5 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.12)] hover:bg-[#ffc47e]" data-testid="button-open-image">
-            <UploadCloud size={15} /> Open image
+            <UploadCloud size={15} />Moti Open image
           </button>
         </div>
       </header>
@@ -377,7 +388,7 @@ function PhotoEditor() {
               <MousePointer2 size={14} className="mt-0.5 shrink-0 text-[#dd9f5c]" />
               <div>
                 <p className="text-[10px] font-bold text-[#d8d4cc]">Small moves, big difference</p>
-                <p className="mt-1 text-[10px] leading-relaxed text-[#858b8d]">Every slider updates the canvas as you move. Your original stays untouched.</p>
+                <p className="mt-1 text-[10px] leading-relaxed text-[#858b8d]">Every slider updates the Image as you move. Your original stays untouched.</p>
               </div>
             </div>
           </div>
@@ -414,7 +425,7 @@ function PhotoEditor() {
                   <h2 className="text-xl font-extrabold tracking-[-.035em] text-[#f1ece3] sm:text-2xl">Bring a frame to life.</h2>
                   <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#929897]">Drop an image here, or open one from your device. It stays right here, always.</p>
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#3a3025] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#443528]" data-testid="button-choose-image">
-                    <UploadCloud size={15} /> Choose image
+                    <UploadCloud size={15} /> Moti Choose image
                   </button>
                   <p className="mt-4 font-mono text-[9px] uppercase tracking-[.18em] text-[#646d70]">JPG · PNG · WEBP · GIF</p>
                 </div>
