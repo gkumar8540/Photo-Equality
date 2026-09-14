@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
 import logo from '../../images/logoe.jpeg';
+import { TopNavigation } from './components/navigation/TopNavigation';
+import BottomNavigationPage from './pages/bottom-navigation';
+import BreadcrumbNavigationPage from './pages/breadcrumb-navigation';
+import MobileNavigationPage from './pages/mobile-navigation';
+import OrbitNavigationPage from './pages/orbit-navigation';
+import PulseNavigationPage from './pages/pulse-navigation';
+import SidebarNavigationPage from './pages/sidebar-navigation';
+import TopNavigationPage from './pages/top-navigation';
 import {
   ArrowUpRight,
   Focus,
@@ -80,8 +88,8 @@ function EmptyArtwork() {
       <div className="absolute left-[12%] top-[17%] h-40 w-40 rounded-full bg-[#d88952]/10 blur-3xl" />
       <div className="absolute bottom-[12%] right-[10%] h-56 w-56 rounded-full bg-[#7995a6]/10 blur-3xl" />
       <svg className="absolute inset-0 h-full w-full opacity-90" viewBox="0 0 900 620" fill="none" aria-hidden="true">
-        <path d="M88 486 247 336l90 57 144-168 333 261H88Z" fill="#252b31" />
-        <path d="m247 336 90 57 144-168 86 68-71 78-93-22-109 86-152 51 105-150Z" fill="#303941" />
+        <path d="M88 486 247 336l90 57 144-168 333 261H88Z" fill="#384551" />
+        <path d="m247 336 90 57 144-168 86 68-71 78-93-22-109 86-152 51 105-150Z" fill="#2f3b45" />
         <path d="m337 393 144-168 86 68-81 98-71-22-78 65Z" fill="#f1aa5e" fillOpacity=".72" />
         <circle cx="669" cy="177" r="43" fill="#d48a57" fillOpacity=".72" />
         <circle cx="669" cy="177" r="68" stroke="#e9b477" strokeOpacity=".16" strokeWidth="1.5" />
@@ -322,9 +330,11 @@ function PhotoEditor() {
     setExportMessage('');
   };
 
+  const [isLooksOpen, setIsLooksOpen] = useState(false);
+
   return (
     <main className="min-h-[100dvh] bg-[#111419] text-[#ede7db]">
-      <header className="flex min-h-[72px] items-center justify-between border-b border-[#282e35] bg-[#15181d] px-4 py-3 sm:px-7">
+      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#282e35] bg-[#15181d] px-4 py-3 sm:px-7">
         <div className="flex items-center gap-3">
         
 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
@@ -336,12 +346,21 @@ function PhotoEditor() {
 
           <div>
             <div className="flex items-center gap-2">
-              <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Moto-EQuality</h1>
+              <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Photo-EQuality</h1>
               <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Baby</span>
             </div>
             <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
           </div>
         </div>
+        <TopNavigation>
+          <a href="/nav/top" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Top</a>
+          <a href="/nav/sidebar" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Side</a>
+          <a href="/nav/mobile" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Mobile</a>
+          <a href="/nav/breadcrumb" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Crumb</a>
+          <a href="/nav/bottom" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Bottom</a>
+          <a href="/nav/orbit" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Orbit</a>
+          <a href="/nav/pulse" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Pulse</a>
+        </TopNavigation>
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-2 text-[10px] text-[#858b8d] sm:flex">
             <ShieldCheck size={14} className="text-[#d99d59]" />
@@ -349,17 +368,18 @@ function PhotoEditor() {
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} data-testid="input-file" />
           <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button flex items-center gap-2 rounded-lg bg-[#f1ae62] px-3.5 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.12)] hover:bg-[#ffc47e]" data-testid="button-open-image">
-            <UploadCloud size={15} />Moti Open image
+            <UploadCloud size={15} /> Open image
           </button>
         </div>
       </header>
 
-      <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[246px_minmax(0,1fr)_272px]">
-        <aside className="order-2 border-t border-[#282e35] bg-[#171b20] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
+    <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[246px_minmax(0,1fr)_272px]">
+{/*aside1*/}
+       <aside className="order-2 border-t border-[#282e35] bg-[#171b30] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Adjustments</p>
-              <p className="mt-1 text-[13px] font-bold text-[#eee7db]">Make it yours</p>
+              <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Make it yours</p>
+              <p className="mt-1 text-[13px] font-bold text-[#eee7db]">* Adjustments *</p>
             </div>
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
           </div>
@@ -413,8 +433,7 @@ function PhotoEditor() {
             onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }}
             onDragLeave={() => setIsDraggingFile(false)}
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
-            data-testid="drop-zone"
-          >
+            data-testid="drop-zone">
             {!hasImage ? (
               <div className={`drop-zone relative flex min-h-[390px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#171c21] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
@@ -425,7 +444,7 @@ function PhotoEditor() {
                   <h2 className="text-xl font-extrabold tracking-[-.035em] text-[#f1ece3] sm:text-2xl">Bring a frame to life.</h2>
                   <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#929897]">Drop an image here, or open one from your device. It stays right here, always.</p>
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#3a3025] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#443528]" data-testid="button-choose-image">
-                    <UploadCloud size={15} /> Moti Choose image
+                    <UploadCloud size={15}/> Choose image
                   </button>
                   <p className="mt-4 font-mono text-[9px] uppercase tracking-[.18em] text-[#646d70]">JPG · PNG · WEBP · GIF</p>
                 </div>
@@ -471,14 +490,31 @@ function PhotoEditor() {
           )}
         </section>
 
-        <aside className="order-3 border-t border-[#282e35] bg-[#171b20] p-5 lg:border-l lg:border-t-0 lg:p-6">
-          <div className="mb-6 flex items-center justify-between">
-            <div>
-              <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Looks</p>
-              <p className="mt-1 text-[13px] font-bold text-[#eee7db]">Find the feeling</p>
-            </div>
-            <Sparkles size={16} className="text-[#dca05b]" />
-          </div>
+{/*aside2*/}
+    <aside
+        className={`order-3 border-t border-[#282e35] bg-[#171b30] transition-all duration-300 lg:border-l lg:border-t-0 ${
+        isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
+    <button
+        type="button"
+        onClick={() => setIsLooksOpen((prev) => !prev)}
+        className="mb-2 flex w-full items-center justify-between text-left">
+      <div>
+        <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">
+         Looks
+        </p>
+        <p className="mt-2 inline-block rounded-lg border border-[#30363d] bg-[#DB2777] px-4 py-2 text-[13px] font-bold text-[#eee7db] shadow-sm">
+        Filters
+        </p>
+      </div>
+
+       <Sparkles
+       size={16}
+       className={`text-[#dca05b] transition-transform duration-300 ${
+       isLooksOpen ? "rotate-180" : "" }`}/>
+    </button>
+       {isLooksOpen && (
+         <div>
+
           <div className="grid grid-cols-2 gap-2">
             {filterOptions.map((option) => (
               <button
@@ -487,14 +523,16 @@ function PhotoEditor() {
                 onClick={() => updateControl('filter', option.name)}
                 disabled={!hasImage}
                 className={`filter-card rounded-lg border bg-[#20252b] p-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${controls.filter === option.name ? 'selected border-[#f3ad61] bg-[#2a2925]' : 'border-[#30363d]'}`}
-                data-testid={`button-filter-${option.name.toLowerCase()}`}
-              >
+                data-testid={`button-filter-${option.name.toLowerCase()}`}>
                 <span className="block h-11 w-full rounded-md" style={{ background: option.swatch, filter: option.name === 'Noir' ? 'grayscale(1)' : option.name === 'Cool' ? 'hue-rotate(16deg)' : undefined }} />
                 <span className="mt-2 block truncate px-1 text-[10px] font-bold text-[#dcd8cf]">{option.name}</span>
                 <span className="mt-0.5 block truncate px-1 pb-1 text-[9px] text-[#7f8788]">{option.description}</span>
               </button>
             ))}
           </div>
+    </div>
+    )}
+          
           <div className={`mt-5 border-t border-[#2a3036] pt-4 ${!hasImage ? 'opacity-40' : ''}`}>
             <div className="mb-2 flex items-center justify-between">
               <label htmlFor="filter-intensity" className="text-[11px] font-semibold text-[#d4d0c9]">Filter intensity</label>
@@ -547,7 +585,7 @@ function PhotoEditor() {
             <RotateCcw size={14} /> Reset
           </button>
           <button type="button" onClick={downloadImage} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#f1ae62] px-4 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.1)] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-download">
-            <Download size={15} /> Download PNG <ArrowUpRight size={13} />
+            <Download size={15} /> Download Image <ArrowUpRight size={13} />
           </button>
         </div>
       </footer>
@@ -564,6 +602,13 @@ function App() {
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Switch>
         <Route path="/" component={PhotoEditor} />
+        <Route path="/nav/top" component={TopNavigationPage} />
+        <Route path="/nav/sidebar" component={SidebarNavigationPage} />
+        <Route path="/nav/mobile" component={MobileNavigationPage} />
+        <Route path="/nav/breadcrumb" component={BreadcrumbNavigationPage} />
+        <Route path="/nav/bottom" component={BottomNavigationPage} />
+        <Route path="/nav/orbit" component={OrbitNavigationPage} />
+        <Route path="/nav/pulse" component={PulseNavigationPage} />
         <Route component={NotFound} />
       </Switch>
     </WouterRouter>
