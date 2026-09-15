@@ -347,7 +347,7 @@ function PhotoEditor() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Photo-EQuality</h1>
-              <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Baby</span>
+              <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>
             </div>
             <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
           </div>
@@ -378,19 +378,19 @@ function PhotoEditor() {
        <aside className="order-2 border-t border-[#282e35] bg-[#171b30] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Make it yours</p>
-              <p className="mt-1 text-[13px] font-bold text-[#eee7db]">* Adjustments *</p>
+              {/*<p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Make it yours</p>*/}
+              <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">* Adjustments *</p>
             </div>
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
           </div>
-          <div className="space-y-0.1">
+          <div className="space-y-0">
             <AdjustmentRow label="Brightness" value={controls.brightness} min={-100} max={100} onChange={(value) => updateControl('brightness', value)} icon={<Sun size={13} />} disabled={!hasImage} testId="brightness" onReset={() => updateControl('brightness', 0)} />
             <AdjustmentRow label="Contrast" value={controls.contrast} min={-100} max={100} onChange={(value) => updateControl('contrast', value)} icon={<Contrast size={13} />} disabled={!hasImage} testId="contrast" onReset={() => updateControl('contrast', 0)} />
             <AdjustmentRow label="Saturation" value={controls.saturation} min={-100} max={100} onChange={(value) => updateControl('saturation', value)} icon={<Droplets size={13} />} disabled={!hasImage} testId="saturation" onReset={() => updateControl('saturation', 0)} />
             <AdjustmentRow label="Blur" value={controls.blur} min={0} max={20} onChange={(value) => updateControl('blur', value)} icon={<Focus size={13} />} suffix="px" disabled={!hasImage} testId="blur" onReset={() => updateControl('blur', 0)} />
           </div>
           <div className="mt-7 border-t border-[#2a3036] pt-5">
-            <p className="mb-3 font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
+            <p className="mb-3 font-mono text-[11px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
             <div className="grid grid-cols-3 gap-2">
               <button type="button" onClick={() => { setCropMode((mode) => !mode); if (!cropRect) setCropRect({ x: .1, y: .1, w: .8, h: .8 }); }} disabled={!hasImage} className={`control-button flex flex-col items-center gap-1.5 rounded-lg border py-2.5 text-[10px] font-semibold ${cropMode ? 'border-[#f3ad61] bg-[#342b23] text-[#f3b572]' : 'border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]'} disabled:cursor-not-allowed disabled:opacity-40`} data-testid="button-toggle-crop">
                 <Crop size={16} /> Crop
@@ -414,7 +414,7 @@ function PhotoEditor() {
           </div>
         </aside>
 
-        <section className="studio-grid order-1 flex min-h-[520px] flex-col bg-[#101318] lg:order-2">
+        <section className="studio-grid mobile-preview order-1 flex min-h-[520px] flex-col bg-[#101318] lg:order-2">
           <div className="flex items-center justify-between border-b border-[#252b31] px-4 py-3 sm:px-6">
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#687276]'}`} />
@@ -585,7 +585,7 @@ function PhotoEditor() {
             <RotateCcw size={14} /> Reset
           </button>
           <button type="button" onClick={downloadImage} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#f1ae62] px-4 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.1)] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-download">
-            <Download size={15} /> Download Image <ArrowUpRight size={13} />
+            <Download size={20} /> Download Image <ArrowUpRight size={19} />
           </button>
         </div>
       </footer>

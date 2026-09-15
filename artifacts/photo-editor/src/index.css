@@ -122,4 +122,14 @@ button { -webkit-tap-highlight-color: transparent; }
 .crop-window { box-shadow: 0 0 0 9999px rgba(7,9,12,.58); }
 @media (max-width: 767px) {
   .studio-grid { background-size: 24px 24px; }
+  .mobile-preview {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    min-height: min(62dvh, 520px);
+    max-height: 62dvh;
+    overflow-y: auto;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
+  }
+  .mobile-preview canvas { max-height: calc(62dvh - 112px); }
 }
