@@ -383,7 +383,7 @@ function PhotoEditor() {
             </div>
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
           </div>
-          <div className="space-y-5">
+          <div className="space-y-0.1">
             <AdjustmentRow label="Brightness" value={controls.brightness} min={-100} max={100} onChange={(value) => updateControl('brightness', value)} icon={<Sun size={13} />} disabled={!hasImage} testId="brightness" onReset={() => updateControl('brightness', 0)} />
             <AdjustmentRow label="Contrast" value={controls.contrast} min={-100} max={100} onChange={(value) => updateControl('contrast', value)} icon={<Contrast size={13} />} disabled={!hasImage} testId="contrast" onReset={() => updateControl('contrast', 0)} />
             <AdjustmentRow label="Saturation" value={controls.saturation} min={-100} max={100} onChange={(value) => updateControl('saturation', value)} icon={<Droplets size={13} />} disabled={!hasImage} testId="saturation" onReset={() => updateControl('saturation', 0)} />
