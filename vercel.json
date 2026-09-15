@@ -1,6 +1,6 @@
 {
   "framework": "vite",
   "buildCommand": "PORT=5173 BASE_PATH=/ pnpm --filter @workspace/photo-editor build",
-  "outputDirectory": "artifacts/photo-editor/public",
+  "outputDirectory": "artifacts/photo-editor/dist",
   "installCommand": "pnpm install --frozen-lockfile"
 }
