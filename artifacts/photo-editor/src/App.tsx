@@ -294,13 +294,30 @@ function PhotoEditor() {
       const link = document.createElement('a');
       const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'edited-image';
       link.download = `${baseName}-edited.png`;
-      link.href = URL.createObjectURL(blob);
+
+// 🚨 Badla hua hissa (Purani 3 lines ki jagah yeh aaya hai):
+      const reader = new FileReader();
+      reader.onloadend = function () {
+        link.href = reader.result;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        setExportMessage('PNG saved to your device.');
+        window.setTimeout(() => setExportMessage(''), 3500);
+      };
+      reader.readAsDataURL(blob);
+
+    }, 'image/png');
+};
+
+     /* link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
       setExportMessage('PNG saved to your device.');
       window.setTimeout(() => setExportMessage(''), 3500);
     }, 'image/png');
-  };
+  };*/
 
   const pointFromEvent = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
