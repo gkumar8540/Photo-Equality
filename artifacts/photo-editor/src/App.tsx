@@ -311,6 +311,7 @@ function PhotoEditor() {
   };
 
   const beginCrop = (event: PointerEvent<HTMLDivElement>) => {
+    if (cropRect && (cropRect.x !== 0 || cropRect.y !== 0 || cropRect.w !== 1 || cropRect.h !== 1)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = pointFromEvent(event);
     cropInteractionRef.current = { type: 'draw', start: point };
@@ -382,7 +383,7 @@ function PhotoEditor() {
 
   return (
     <main className="min-h-[100dvh] bg-[#111419] text-[#ede7db]">
-      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#282e35] bg-[#15181d] px-4 py-3 sm:px-7">
+      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-3 sm:px-7">
         <div className="flex items-center gap-3">
         
 <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
@@ -462,7 +463,7 @@ function PhotoEditor() {
           </div>
         </aside>
 
-        <section className="studio-grid mobile-preview order-1 flex min-h-[520px] flex-col bg-[#101318] lg:order-2">
+        <section className="studio-grid mobile-preview order-1 flex min-h-[520px] flex-col bg-[#102148] lg:order-2">
           <div className="flex items-center justify-between border-b border-[#252b31] px-4 py-3 sm:px-6">
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#687276]'}`} />
@@ -483,7 +484,7 @@ function PhotoEditor() {
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[390px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#171c21] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[390px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#a6424f] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
@@ -511,7 +512,7 @@ function PhotoEditor() {
                     onPointerCancel={endCrop}
                     data-testid="crop-overlay"
                   >
-                    <div className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
+                    <div onPointerDown={(event) => event.stopPropagation()} className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
                       <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
                         <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
                         <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
@@ -548,7 +549,7 @@ function PhotoEditor() {
 
 {/*aside2*/}
     <aside
-        className={`order-3 border-t border-[#282e35] bg-[#171b30] transition-all duration-300 lg:border-l lg:border-t-0 ${
+        className={`order-3 border-t border-[#9daeb2] bg-[#171b30] transition-all duration-300 lg:border-l lg:border-t-0 ${
         isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
     <button
         type="button"
@@ -632,7 +633,7 @@ function PhotoEditor() {
         </aside>
       </div>
 
-      <footer className="flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#15181d] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">
+      <footer className="flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">
         <div className="flex min-h-5 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
           {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]" />Local edits are private by default</>}
         </div>
