@@ -33,6 +33,7 @@ import {
 
 type FilterName = 'Original' | 'Noir' | 'Warm' | 'Cool' | 'Vintage' | 'Fade' | 'Drama';
 type CropRect = { x: number; y: number; w: number; h: number };
+type CropEdge = 'top-left' | 'top' | 'top-right' | 'right' | 'bottom-right' | 'bottom' | 'bottom-left' | 'left';
 type Controls = {
   brightness: number;
   contrast: number;
@@ -164,7 +165,6 @@ function PhotoEditor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const pointerStartRef = useRef<{ x: number; y: number } | null>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState(0);
@@ -176,6 +176,12 @@ function PhotoEditor() {
   const [appliedCrop, setAppliedCrop] = useState<CropRect | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
+  const cropInteractionRef = useRef<{
+    type: 'draw' | 'resize';
+    edge?: CropEdge;
+    start: { x: number; y: number };
+    rect?: CropRect;
+  } | null>(null);
 
   const hasImage = Boolean(sourceUrl);
   const previewAspect = dimensions.width && dimensions.height
@@ -307,13 +313,53 @@ function PhotoEditor() {
   const beginCrop = (event: PointerEvent<HTMLDivElement>) => {
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = pointFromEvent(event);
-    pointerStartRef.current = point;
+    cropInteractionRef.current = { type: 'draw', start: point };
     setCropRect({ x: point.x, y: point.y, w: 0.01, h: 0.01 });
   };
 
+  const beginResize = (event: PointerEvent<HTMLSpanElement>, edge: CropEdge) => {
+    event.stopPropagation();
+    if (!cropRect) return;
+    event.currentTarget.setPointerCapture(event.pointerId);
+    cropInteractionRef.current = {
+      type: 'resize',
+      edge,
+      start: { x: event.clientX, y: event.clientY },
+      rect: cropRect,
+    };
+  };
+
   const moveCrop = (event: PointerEvent<HTMLDivElement>) => {
-    if (!pointerStartRef.current) return;
-    const start = pointerStartRef.current;
+    const interaction = cropInteractionRef.current;
+    if (!interaction) return;
+    if (interaction.type === 'resize' && interaction.rect && interaction.edge) {
+      const bounds = event.currentTarget.getBoundingClientRect();
+      const deltaX = (event.clientX - interaction.start.x) / bounds.width;
+      const deltaY = (event.clientY - interaction.start.y) / bounds.height;
+      const initial = interaction.rect;
+      const minimum = 0.03;
+      let next = { ...initial };
+
+      if (interaction.edge.includes('left')) {
+        next.x = Math.min(initial.x + initial.w - minimum, Math.max(0, initial.x + deltaX));
+        next.w = initial.w + initial.x - next.x;
+      }
+      if (interaction.edge.includes('right')) {
+        next.w = Math.min(1 - initial.x, Math.max(minimum, initial.w + deltaX));
+      }
+      if (interaction.edge.includes('top')) {
+        next.y = Math.min(initial.y + initial.h - minimum, Math.max(0, initial.y + deltaY));
+        next.h = initial.h + initial.y - next.y;
+      }
+      if (interaction.edge.includes('bottom')) {
+        next.h = Math.min(1 - initial.y, Math.max(minimum, initial.h + deltaY));
+      }
+      setCropRect(next);
+      return;
+    }
+
+    if (interaction.type !== 'draw') return;
+    const start = interaction.start;
     const point = pointFromEvent(event);
     setCropRect({
       x: Math.min(start.x, point.x),
@@ -324,7 +370,7 @@ function PhotoEditor() {
   };
 
   const endCrop = () => {
-    pointerStartRef.current = null;
+    cropInteractionRef.current = null;
   };
 
   const updateControl = (key: keyof Controls, value: number | FilterName) => {
@@ -394,7 +440,7 @@ function PhotoEditor() {
           <div className="mt-7 border-t border-[#2a3036] pt-5">
             <p className="mb-3 font-mono text-[11px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
             <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => { setCropMode((mode) => !mode); if (!cropRect) setCropRect({ x: .1, y: .1, w: .8, h: .8 }); }} disabled={!hasImage} className={`control-button flex flex-col items-center gap-1.5 rounded-lg border py-2.5 text-[10px] font-semibold ${cropMode ? 'border-[#f3ad61] bg-[#342b23] text-[#f3b572]' : 'border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]'} disabled:cursor-not-allowed disabled:opacity-40`} data-testid="button-toggle-crop">
+              <button type="button" onClick={() => { setCropMode((mode) => !mode); if (!cropRect) setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }} disabled={!hasImage} className={`control-button flex flex-col items-center gap-1.5 rounded-lg border py-2.5 text-[10px] font-semibold ${cropMode ? 'border-[#f3ad61] bg-[#342b23] text-[#f3b572]' : 'border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]'} disabled:cursor-not-allowed disabled:opacity-40`} data-testid="button-toggle-crop">
                 <Crop size={16} /> Crop
               </button>
               <button type="button" onClick={() => rotate('left')} disabled={!hasImage} className="control-button flex flex-col items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-2.5 text-[10px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-left">
@@ -475,6 +521,14 @@ function PhotoEditor() {
                       <span className="absolute -right-1 -top-1 h-3 w-3 border-r-2 border-t-2 border-[#f6bf7d]" />
                       <span className="absolute -bottom-1 -left-1 h-3 w-3 border-b-2 border-l-2 border-[#f6bf7d]" />
                       <span className="absolute -bottom-1 -right-1 h-3 w-3 border-b-2 border-r-2 border-[#f6bf7d]" />
+                      <span onPointerDown={(event) => beginResize(event, 'top-left')} className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'top')} className="absolute -left-1/2 -top-2 h-4 w-full cursor-ns-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'top-right')} className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'right')} className="absolute -right-2 -top-1/2 h-full w-4 cursor-ew-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'bottom-right')} className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'bottom')} className="absolute -bottom-2 -left-1/2 h-4 w-full cursor-ns-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'bottom-left')} className="absolute -bottom-2 -left-2 h-4 w-4 cursor-nesw-resize" />
+                      <span onPointerDown={(event) => beginResize(event, 'left')} className="absolute -left-2 -top-1/2 h-full w-4 cursor-ew-resize" />
                     </div>
                   </div>
                 )}
