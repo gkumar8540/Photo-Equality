@@ -517,12 +517,11 @@ function PhotoEditor() {
         </div>
       </header>
 
-    <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[246px_minmax(0,1fr)_272px]">
+    <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
-       <aside className="order-2 border-t border-[#282e35] bg-[#171b30] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
+       <aside className="order-2 border-t border-[#232930] bg-[#14171c] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              {/*<p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Make it yours</p>*/}
               <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">* Adjustments *</p>
             </div>
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
@@ -558,7 +557,7 @@ function PhotoEditor() {
           </div>
         </aside>
 
-        <section className="studio-grid mobile-preview order-1 flex min-h-[520px] flex-col bg-[#102148] lg:order-2">
+        <section className="studio-grid mobile-preview order-1 flex min-h-[520px] flex-col bg-[#111419] lg:order-2">
           <div className="flex items-center justify-between border-b border-[#252b31] px-4 py-3 sm:px-6">
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#687276]'}`} />
@@ -579,7 +578,7 @@ function PhotoEditor() {
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[390px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#a6424f] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[390px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#15181d] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
@@ -594,9 +593,9 @@ function PhotoEditor() {
                 </div>
               </div>
             ) : (
-              <div ref={stageRef} className="relative inline-block max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
-                <div className="checkerboard overflow-hidden rounded-xl border border-[#303840] p-2 shadow-[0_24px_70px_rgba(0,0,0,.34)]">
-                  <canvas ref={canvasRef} className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain" data-testid="canvas-preview" />
+              <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
+                <div className="checkerboard overflow-hidden rounded-xl border border-[#303840] p-2 shadow-[0_24px_70px_rgba(0,0,0,.34)] w-full flex items-center justify-center min-h-[300px]">
+                  <canvas ref={canvasRef} className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain w-full h-auto min-w-[260px]" style={{ imageRendering: 'auto' }} data-testid="canvas-preview" />
                 </div>
                 {cropMode && cropRect && (
                   <div
