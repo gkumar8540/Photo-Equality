@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Photo-Equality</string>
+    <string name="title_activity_main">Photo-Equality</string>
+    <string name="package_name">com.photoequality.app.native</string>
+    <string name="custom_url_scheme">com.photoequality.app.native</string>
+</resources>

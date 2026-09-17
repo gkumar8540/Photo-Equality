@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
+import { Capacitor } from '@capacitor/core';
 import logo from '../../images/logoe.jpeg';
 import { TopNavigation } from './components/navigation/TopNavigation';
 import BottomNavigationPage from './pages/bottom-navigation';
@@ -226,12 +227,62 @@ function PhotoEditor() {
       canvas.height = sh;
       const context = canvas.getContext('2d');
       if (!context) return;
-              context.imageSmoothingEnabled = true;
-              context.imageSmoothingQuality = 'high';
+
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
       context.clearRect(0, 0, sw, sh);
-      context.filter = buildFilter(controls);
-      context.drawImage(rotated, sx, sy, sw, sh, 0, 0, sw, sh);
-      context.filter = 'none';
+
+      // Multi-device fallback logic: Verify if context filter string renders cleanly.
+      // If the WebView doesn't support context.filter natively, apply custom fast programmatic pixel transformation arithmetic.
+      try {
+        context.filter = buildFilter(controls);
+        context.drawImage(rotated, sx, sy, sw, sh, 0, 0, sw, sh);
+        context.filter = 'none';
+      } catch (filterError) {
+        console.warn('Hardware filter acceleration unsupported on this device, falling back to safe software fallback pixel mapping pipeline:', filterError);
+        context.filter = 'none';
+        context.drawImage(rotated, sx, sy, sw, sh, 0, 0, sw, sh);
+
+        // Manual Math Processing Fallback for universal device compatibility (Oppo, Vivo, older Android systems)
+        try {
+          const imgData = context.getImageData(0, 0, sw, sh);
+          const data = imgData.data;
+          const { brightness, contrast, saturation } = controls;
+
+          const bMul = 1 + (brightness / 100);
+          const cMul = 1 + (contrast / 100);
+          const sMul = 1 + (saturation / 100);
+
+          for (let i = 0; i < data.length; i += 4) {
+            let r = data[i];
+            let g = data[i + 1];
+            let b = data[i + 2];
+
+            // 1. Apply Brightness configuration
+            r = Math.min(255, Math.max(0, r * bMul));
+            g = Math.min(255, Math.max(0, g * bMul));
+            b = Math.min(255, Math.max(0, b * bMul));
+
+            // 2. Apply Contrast matrix adjustments
+            r = Math.min(255, Math.max(0, ((r - 128) * cMul) + 128));
+            g = Math.min(255, Math.max(0, ((g - 128) * cMul) + 128));
+            b = Math.min(255, Math.max(0, ((b - 128) * cMul) + 128));
+
+            // 3. Apply Saturation linear weights mapping
+            const gray = 0.299 * r + 0.587 * g + 0.114 * b;
+            r = Math.min(255, Math.max(0, gray + (r - gray) * sMul));
+            g = Math.min(255, Math.max(0, gray + (g - gray) * sMul));
+            b = Math.min(255, Math.max(0, gray + (b - gray) * sMul));
+
+            data[i] = r;
+            data[i + 1] = g;
+            data[i + 2] = b;
+          }
+          context.putImageData(imgData, 0, 0);
+        } catch (pixelError) {
+          console.error('Pixel fallback mapping fatal error:', pixelError);
+        }
+      }
     };
     image.src = sourceUrl;
   }, [appliedCrop, controls, rotation, sourceUrl]);
@@ -286,38 +337,65 @@ function PhotoEditor() {
     const canvas = canvasRef.current;
     if (!canvas || !hasImage) return;
     setExportMessage('Preparing PNG…');
+
+    const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'edited-image';
+    const finalFileName = `${baseName}-edited.png`;
+
     canvas.toBlob((blob) => {
       if (!blob) {
         setExportMessage('Export could not be prepared. Try again.');
         return;
       }
+
+      if (Capacitor.isNativePlatform()) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          try {
+            const dataUrl = reader.result as string;
+            const base64Data = dataUrl.split(',')[1];
+
+            // Direct check for interface window object
+            const win = window as any;
+            const bridge = win.AndroidDownloadBridge;
+
+            if (bridge && typeof bridge.saveBase64ImageToDownloads === 'function') {
+              const success = bridge.saveBase64ImageToDownloads(base64Data, finalFileName);
+              if (success) {
+                setExportMessage('PNG saved to your device.');
+              } else {
+                setExportMessage('Failed to save image. Please try again.');
+              }
+            } else {
+              // Safe secondary immediate lookup for remote domain injections
+              if (win.AndroidDownloadBridge && typeof win.AndroidDownloadBridge.saveBase64ImageToDownloads === 'function') {
+                const retrySuccess = win.AndroidDownloadBridge.saveBase64ImageToDownloads(base64Data, finalFileName);
+                if (retrySuccess) {
+                  setExportMessage('PNG saved to your device.');
+                  window.setTimeout(() => setExportMessage(''), 3500);
+                  return;
+                }
+              }
+              setExportMessage('Bridge binding delayed. Image could not be saved to Downloads folder.');
+            }
+          } catch (err) {
+            console.error('Failed to save file natively via bridge:', err);
+            setExportMessage('Failed to save image. Please try again.');
+          }
+          window.setTimeout(() => setExportMessage(''), 3500);
+        };
+        reader.readAsDataURL(blob);
+        return;
+      }
+
       const link = document.createElement('a');
-      const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'edited-image';
-      link.download = `${baseName}-edited.png`;
-
-// 🚨 Badla hua hissa (Purani 3 lines ki jagah yeh aaya hai):
-      const reader = new FileReader();
-      reader.onloadend = function () {
-        link.href = reader.result;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        
-        setExportMessage('PNG saved to your device.');
-        window.setTimeout(() => setExportMessage(''), 3500);
-      };
-      reader.readAsDataURL(blob);
-
-    }, 'image/png');
-};
-
-     /* link.href = URL.createObjectURL(blob);
+      link.download = finalFileName;
+      link.href = URL.createObjectURL(blob);
       link.click();
       URL.revokeObjectURL(link.href);
       setExportMessage('PNG saved to your device.');
       window.setTimeout(() => setExportMessage(''), 3500);
     }, 'image/png');
-  };*/
+  };
 
   const pointFromEvent = (event: PointerEvent<HTMLDivElement>) => {
     const rect = event.currentTarget.getBoundingClientRect();
