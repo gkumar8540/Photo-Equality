@@ -519,10 +519,10 @@ function PhotoEditor() {
 
     <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
-       <aside className="order-2 border-t border-[#232930] bg-[#14171c] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
+       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">* Adjustments *</p>
+              <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">|| Adjustments ||</p>
             </div>
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
           </div>
@@ -546,6 +546,17 @@ function PhotoEditor() {
               </button>
             </div>
           </div>
+
+       {cropMode && hasImage && (
+            <div className="flex items-center justify-center justify-between border-t border-[#2b3138] bg-[#171b20] px-4 py-3 sm:px-5">
+             {/* <p className="flex items-center gap-2 text-[10px] text-[#a4a7a2]"><Crop size={14} className="text-[#e9a65e]" /> Drag across the image to set a crop</p>*/}
+              <div className="flex gap-2">
+                <button type="button" onClick={() => { setCropMode(false); setCropRect(null); }} className="control-button rounded-md px-3 py-2 text-[10px] font-bold text-[#ffffff] bg-[#991B1B]" data-testid="button-cancel-crop">Cancel</button>
+                <button type="button" onClick={() => { if (cropRect) setAppliedCrop(cropRect); setCropMode(false); }} disabled={!cropRect} className="control-button flex items-center gap-1 rounded-md bg-[#efaa60] px-2 py-2 text-[4px] font-bold text-[#26282a] hover:bg-[#ffc17c] disabled:opacity-50" data-testid="button-apply-crop"><Check size={15} /> Apply crop</button>
+              </div>
+            </div>
+          )}
+
           <div className="mt-6 rounded-xl border border-[#30363d] bg-[#1c2127] p-3.5">
             <div className="flex items-start gap-2.5">
               <MousePointer2 size={14} className="mt-0.5 shrink-0 text-[#dd9f5c]" />
@@ -630,7 +641,7 @@ function PhotoEditor() {
               </div>
             )}
           </div>
-          {cropMode && hasImage && (
+          {/*cropMode && hasImage && (
             <div className="flex items-center justify-between border-t border-[#2b3138] bg-[#171b20] px-4 py-3 sm:px-6">
               <p className="flex items-center gap-2 text-[10px] text-[#a4a7a2]"><Crop size={14} className="text-[#e9a65e]" /> Drag across the image to set a crop</p>
               <div className="flex gap-2">
@@ -638,12 +649,12 @@ function PhotoEditor() {
                 <button type="button" onClick={() => { if (cropRect) setAppliedCrop(cropRect); setCropMode(false); }} disabled={!cropRect} className="control-button flex items-center gap-1.5 rounded-md bg-[#efaa60] px-3 py-2 text-[10px] font-bold text-[#26282a] hover:bg-[#ffc17c] disabled:opacity-50" data-testid="button-apply-crop"><Check size={13} /> Apply crop</button>
               </div>
             </div>
-          )}
+          )*/}
         </section>
 
 {/*aside2*/}
     <aside
-        className={`order-3 border-t border-[#9daeb2] bg-[#171b30] transition-all duration-300 lg:border-l lg:border-t-0 ${
+        className={`order-3 border-t border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${
         isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
     <button
         type="button"
@@ -729,7 +740,7 @@ function PhotoEditor() {
 
       <footer className="flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">
         <div className="flex min-h-5 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
-          {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]" />Local edits are private by default</>}
+          {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]" /> Edits are private by default</>}
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
           <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-2 rounded-lg border border-[#394047] bg-[#20252b] px-3.5 py-2.5 text-[11px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-reset-all">
@@ -745,7 +756,7 @@ function PhotoEditor() {
 }
 
 function NotFound() {
-  return <div className="flex min-h-screen items-center justify-center bg-[#111419] text-[#eee7db]">Page not found</div>;
+  return <div className="flex min-h-screen items-center justify-center bg-[#112d5c] text-[#eee7db]">Page not found</div>;
 }
 
 function App() {
