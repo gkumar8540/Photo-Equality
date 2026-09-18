@@ -477,7 +477,7 @@ function PhotoEditor() {
   const [isLooksOpen, setIsLooksOpen] = useState(false);
 
   return (
-    <main className="min-h-[100dvh] bg-[#111419] text-[#ede7db]">
+    <main className="min-h-[100dvh] pb-16 bg-[#1d3255] text-[#ede7db]">
       <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-3 sm:px-7">
         <div className="flex items-center gap-3">
         
@@ -497,13 +497,15 @@ function PhotoEditor() {
           </div>
         </div>
         <TopNavigation>
-          <a href="/nav/top" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Top</a>
-          <a href="/nav/sidebar" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Side</a>
-          <a href="/nav/mobile" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Mobile</a>
-          <a href="/nav/breadcrumb" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Crumb</a>
-          <a href="/nav/bottom" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Bottom</a>
-          <a href="/nav/orbit" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Orbit</a>
-          <a href="/nav/pulse" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#242a30] hover:text-[#f4eee2]">Pulse</a>
+          <div className="grid w-full py-0.5 grid-cols-5 gap-3">
+          <a href="/nav/top" className="rounded-md px-4 py-2 text-[15px] font-bold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Mixer</a>
+          <a href="/nav/sidebar" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Side</a>
+          <a href="/nav/mobile" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Mobile</a>
+          {/*<a href="/nav/breadcrumb" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
+          <a href="/nav/bottom" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
+          <a href="/nav/orbit" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Orbit</a>
+          <a href="/nav/pulse" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Pulse</a>
+          </div>
         </TopNavigation>
         <div className="flex items-center gap-2">
           <div className="hidden items-center gap-2 text-[10px] text-[#858b8d] sm:flex">
@@ -568,13 +570,41 @@ function PhotoEditor() {
           </div>
         </aside>
 
-        <section className="studio-grid mobile-preview order-1 flex min-h-[520px] flex-col bg-[#111419] lg:order-2">
-          <div className="flex items-center justify-between border-b border-[#252b31] px-4 py-3 sm:px-6">
+        <section className="studio-grid mobile-preview order-1 flex min-h-fit flex-col bg-[#294169] lg:order-2">
+          <div className="flex items-center justify-between border-b border-[#4271ff] px-4 py-3 sm:px-6">
             <div className="flex items-center gap-2">
-              <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#687276]'}`} />
+              <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#1c8d15]'}`} />
               <span className="font-mono text-[10px] uppercase tracking-[.16em] text-[#989d9b]">{hasImage ? 'Live preview' : 'Ready when you are'}</span>
             </div>
-            {hasImage && (
+
+                 {hasImage && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                          onClick={() => {
+                          setSourceUrl('');
+                          setFileName('');
+                          setFileSize(0);
+                          setControls(defaultControls);
+                          setRotation(0);
+                          setCropMode(false);
+                          setCropRect(null);
+                          setAppliedCrop(null);
+                          setExportMessage('');
+                          }}
+                          className="rounded-md px-2 py-1 text-[10px] font-bold hover:text-[#ffffff] bg-[#dc2626]">
+                         Remove
+                      </button>
+
+                  {/* <div className="flex items-center gap-3 font-mono text-[10px] text-[#737b7c]">
+                    <span>{rotation}°</span>
+                    <span className="h-3 w-px bg-[#384047]" />
+                    <span>{Math.round(previewAspect * 100) / 100}:1</span>
+                   </div>*/}
+                  </div>
+                )}
+
+             {hasImage && (
               <div className="flex items-center gap-3 font-mono text-[10px] text-[#737b7c]">
                 <span>{rotation}°</span>
                 <span className="h-3 w-px bg-[#384047]" />
@@ -615,8 +645,8 @@ function PhotoEditor() {
                     onPointerMove={moveCrop}
                     onPointerUp={endCrop}
                     onPointerCancel={endCrop}
-                    data-testid="crop-overlay"
-                  >
+                    data-testid="crop-overlay">
+
                     <div onPointerDown={(event) => event.stopPropagation()} className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
                       <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
                         <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
@@ -692,8 +722,8 @@ function PhotoEditor() {
               </button>
             ))}
           </div>
-    </div>
-    )}
+        </div>
+       )}
           
           <div className={`mt-5 border-t border-[#2a3036] pt-4 ${!hasImage ? 'opacity-40' : ''}`}>
             <div className="mb-2 flex items-center justify-between">
@@ -738,7 +768,7 @@ function PhotoEditor() {
         </aside>
       </div>
 
-      <footer className="flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">
+      <footer className=" fixed bottom-0 left-0 z-50 w-full  flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">
         <div className="flex min-h-5 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
           {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]" /> Edits are private by default</>}
         </div>
