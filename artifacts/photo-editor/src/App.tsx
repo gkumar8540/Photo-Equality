@@ -547,7 +547,7 @@ function PhotoEditor() {
         </div>
         <TopNavigation>
           <div className="items-center grid w-full px-2 py-1.5 grid-cols-5 gap-3">
-          <a href="/nav/top" className="flex items-center justify-center rounded-md h-7 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
+          <a href="/nav/mixer" className="flex items-center justify-center rounded-md h-7 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
           <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Side</a>
           <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mobile</a>
           {/*<a href="/nav/breadcrumb" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
@@ -902,6 +902,7 @@ function App() {
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Switch>
         <Route path="/" component={PhotoEditor} />
+        <Route path="/nav/mixer" component={TopNavigationPage} />
         <Route path="/nav/top" component={TopNavigationPage} />
         <Route path="/nav/sidebar" component={SidebarNavigationPage} />
         <Route path="/nav/mobile" component={MobileNavigationPage} />
