@@ -173,6 +173,20 @@ function PhotoEditor() {
   const [controls, setControls] = useState<Controls>(defaultControls);
   const [rotation, setRotation] = useState(0);
   const [cropMode, setCropMode] = useState(false);
+  const [showAdjustments, setShowAdjustments] = useState(true);
+  useEffect(() => {
+  if (!showAdjustments) return;
+
+  const handleOutsideClick = () => {
+    setShowAdjustments(false);
+  };
+
+  document.addEventListener('click', handleOutsideClick);
+
+  return () => {
+    document.removeEventListener('click', handleOutsideClick);
+  };
+}, [showAdjustments]);
   const [cropRect, setCropRect] = useState<CropRect | null>(null);
   const [appliedCrop, setAppliedCrop] = useState<CropRect | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
@@ -339,7 +353,7 @@ function PhotoEditor() {
     setExportMessage('Preparing PNG…');
 
     const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'edited-image';
-    const finalFileName = `${baseName}-edited.png`;
+    const finalFileName = `${baseName}-Equality.png`;
 
     canvas.toBlob((blob) => {
       if (!blob) {
@@ -398,15 +412,15 @@ function PhotoEditor() {
   };
 
   const pointFromEvent = (event: PointerEvent<HTMLDivElement>) => {
-    const rect = event.currentTarget.getBoundingClientRect();
+    const rect = (canvasRef.current ?? event.currentTarget).getBoundingClientRect();
     return {
       x: Math.min(1, Math.max(0, (event.clientX - rect.left) / rect.width)),
       y: Math.min(1, Math.max(0, (event.clientY - rect.top) / rect.height)),
     };
   };
-
+                               
   const beginCrop = (event: PointerEvent<HTMLDivElement>) => {
-    if (cropRect && (cropRect.x !== 0 || cropRect.y !== 0 || cropRect.w !== 1 || cropRect.h !== 1)) return;
+    if (cropRect && (cropRect.x !== 0 || cropRect.y !== 0 || cropRect.w !== 0 || cropRect.h !== 0)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = pointFromEvent(event);
     cropInteractionRef.current = { type: 'draw', start: point };
@@ -418,9 +432,7 @@ function PhotoEditor() {
     if (!cropRect) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     cropInteractionRef.current = {
-      type: 'resize',
-      edge,
-      start: { x: event.clientX, y: event.clientY },
+      type: 'resize',edge, start: { x: event.clientX, y: event.clientY },
       rect: cropRect,
     };
   };
@@ -457,11 +469,34 @@ function PhotoEditor() {
     if (interaction.type !== 'draw') return;
     const start = interaction.start;
     const point = pointFromEvent(event);
+
+    let x = Math.min(start.x, point.x);
+    let y = Math.min(start.y, point.y);
+    let w = Math.abs(point.x - start.x);
+    let h = Math.abs(point.y - start.y);
+
+    if (start.x <= 0.02) {
+      x = 0;
+      w = Math.max(0.03, point.x);
+    }
+    if (start.x >= 0.98) {
+      x = Math.min(point.x, 1);
+      w = Math.max(0.03, 1 - x);
+    }
+    if (start.y <= 0.02) {
+      y = 0;
+      h = Math.max(0.03, point.y);
+    }
+    if (start.y >= 0.98) {
+      y = Math.min(point.y, 1);
+      h = Math.max(0.03, 1 - y);
+    }
+
     setCropRect({
-      x: Math.min(start.x, point.x),
-      y: Math.min(start.y, point.y),
-      w: Math.max(0.03, Math.abs(point.x - start.x)),
-      h: Math.max(0.03, Math.abs(point.y - start.y)),
+      x: Math.min(1, Math.max(0, x)),
+      y: Math.min(1, Math.max(0, y)),
+      w: Math.min(1, Math.max(0.03, w)),
+      h: Math.min(1, Math.max(0.03, h)),
     });
   };
 
@@ -475,6 +510,20 @@ function PhotoEditor() {
   };
 
   const [isLooksOpen, setIsLooksOpen] = useState(false);
+
+  useEffect(() => {
+  if (!isLooksOpen) return;
+
+  const handleOutsideClick = () => {
+    setIsLooksOpen(false);
+  };
+
+  document.addEventListener('click', handleOutsideClick);
+
+  return () => {
+    document.removeEventListener('click', handleOutsideClick);
+  };
+}, [isLooksOpen]);
 
   return (
     <main className="min-h-[100dvh] pb-16 bg-[#1d3255] text-[#ede7db]">
@@ -497,14 +546,14 @@ function PhotoEditor() {
           </div>
         </div>
         <TopNavigation>
-          <div className="grid w-full py-0.5 grid-cols-5 gap-3">
-          <a href="/nav/top" className="rounded-md px-4 py-2 text-[15px] font-bold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Mixer</a>
-          <a href="/nav/sidebar" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Side</a>
-          <a href="/nav/mobile" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Mobile</a>
-          {/*<a href="/nav/breadcrumb" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
-          <a href="/nav/bottom" className="rounded-md px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
-          <a href="/nav/orbit" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Orbit</a>
-          <a href="/nav/pulse" className="rounded-md px-2 py-2 text-[15px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Pulse</a>
+          <div className="items-center grid w-full px-2 py-1.5 grid-cols-5 gap-3">
+          <a href="/nav/top" className="flex items-center justify-center rounded-md h-7 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
+          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Side</a>
+          <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mobile</a>
+          {/*<a href="/nav/breadcrumb" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
+          <a href="/nav/bottom" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
+          <a href="/nav/orbit" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
+          <a href="/nav/pulse" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pulse</a>
           </div>
         </TopNavigation>
         <div className="flex items-center gap-2">
@@ -513,27 +562,84 @@ function PhotoEditor() {
             <span>Nothing leaves your browser</span>
           </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} data-testid="input-file" />
-          <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button flex items-center gap-2 rounded-lg bg-[#f1ae62] px-3.5 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.12)] hover:bg-[#ffc47e]" data-testid="button-open-image">
+          {/*<button type="button" onClick={() => fileInputRef.current?.click()} className="control-button flex items-center gap-2 rounded-lg bg-[#f1ae62] px-3.5 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.12)] hover:bg-[#ffc47e]" data-testid="button-open-image">
             <UploadCloud size={15} /> Open image
-          </button>
+          </button>*/}
         </div>
       </header>
 
     <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
        <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
-          <div className="mb-6 flex items-center justify-between">
+          {/*<div className="mb-6 flex items-center justify-between">
             <div>
               <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">|| Adjustments ||</p>
             </div>
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
-          </div>
-          <div className="space-y-0">
-            <AdjustmentRow label="Brightness" value={controls.brightness} min={-100} max={100} onChange={(value) => updateControl('brightness', value)} icon={<Sun size={13} />} disabled={!hasImage} testId="brightness" onReset={() => updateControl('brightness', 0)} />
-            <AdjustmentRow label="Contrast" value={controls.contrast} min={-100} max={100} onChange={(value) => updateControl('contrast', value)} icon={<Contrast size={13} />} disabled={!hasImage} testId="contrast" onReset={() => updateControl('contrast', 0)} />
-            <AdjustmentRow label="Saturation" value={controls.saturation} min={-100} max={100} onChange={(value) => updateControl('saturation', value)} icon={<Droplets size={13} />} disabled={!hasImage} testId="saturation" onReset={() => updateControl('saturation', 0)} />
-            <AdjustmentRow label="Blur" value={controls.blur} min={0} max={20} onChange={(value) => updateControl('blur', value)} icon={<Focus size={13} />} suffix="px" disabled={!hasImage} testId="blur" onReset={() => updateControl('blur', 0)} />
-          </div>
+          </div>*/}
+
+  <div onClick={(event) => event.stopPropagation()}> 
+    <button type="button"onClick={() => setShowAdjustments((value) => !value)}
+          className="mb-3 flex w-full items-center justify-between rounded-lg border border-[#30363d] bg-[#20252b] px-3 py-2.5 text-left">
+          <span className=" item-center  text-[14px] font-bold text-[#eee7db]">
+          Adjustments
+          </span>
+
+          <span className="text-[12px] text-[#8a8f8f]">
+          {showAdjustments ? '−' : '+'}
+          </span>
+     </button>
+
+       {showAdjustments && (
+      <div className="space-y-0">
+      <AdjustmentRow
+      label="Brightness"
+      value={controls.brightness}
+      min={-100}
+      max={100}
+      onChange={(value) => updateControl('brightness', value)}
+      icon={<Sun size={13} />}
+      disabled={!hasImage}
+      testId="brightness"
+      onReset={() => updateControl('brightness', 0)}/>
+
+    <AdjustmentRow
+      label="Contrast"
+      value={controls.contrast}
+      min={-100}
+      max={100}
+      onChange={(value) => updateControl('contrast', value)}
+      icon={<Contrast size={13} />}
+      disabled={!hasImage}
+      testId="contrast"
+      onReset={() => updateControl('contrast', 0)}/>
+
+    <AdjustmentRow
+      label="Saturation"
+      value={controls.saturation}
+      min={-100}
+      max={100}
+      onChange={(value) => updateControl('saturation', value)}
+      icon={<Droplets size={13} />}
+      disabled={!hasImage}
+      testId="saturation"
+      onReset={() => updateControl('saturation', 0)}/>
+
+    <AdjustmentRow
+      label="Blur"
+      value={controls.blur}
+      min={0}
+      max={20}
+      onChange={(value) => updateControl('blur', value)}
+      icon={<Focus size={13} />}
+      suffix="px"
+      disabled={!hasImage}
+      testId="blur"
+      onReset={() => updateControl('blur', 0)}/>
+      </div>
+    )}
+    </div>
+
           <div className="mt-7 border-t border-[#2a3036] pt-5">
             <p className="mb-3 font-mono text-[11px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
             <div className="grid grid-cols-3 gap-2">
@@ -592,7 +698,7 @@ function PhotoEditor() {
                           setAppliedCrop(null);
                           setExportMessage('');
                           }}
-                          className="rounded-md px-2 py-1 text-[10px] font-bold hover:text-[#ffffff] bg-[#dc2626]">
+                          className="rounded-md px-2 py-1 text-[10px] font-bold hoverf:text-[#ffffff] bg-[#dc2626]">
                          Remove
                       </button>
 
@@ -619,7 +725,7 @@ function PhotoEditor() {
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[390px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#15181d] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[400px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#15181d] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
@@ -627,7 +733,7 @@ function PhotoEditor() {
                   </div>
                   <h2 className="text-xl font-extrabold tracking-[-.035em] text-[#f1ece3] sm:text-2xl">Bring a frame to life.</h2>
                   <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#929897]">Drop an image here, or open one from your device. It stays right here, always.</p>
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#3a3025] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#443528]" data-testid="button-choose-image">
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#443528] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#3a3025]" data-testid="button-choose-image">
                     <UploadCloud size={15}/> Choose image
                   </button>
                   <p className="mt-4 font-mono text-[9px] uppercase tracking-[.18em] text-[#646d70]">JPG · PNG · WEBP · GIF</p>
@@ -635,39 +741,40 @@ function PhotoEditor() {
               </div>
             ) : (
               <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
-                <div className="checkerboard overflow-hidden rounded-xl border border-[#303840] p-2 shadow-[0_24px_70px_rgba(0,0,0,.34)] w-full flex items-center justify-center min-h-[300px]">
-                  <canvas ref={canvasRef} className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain w-full h-auto min-w-[260px]" style={{ imageRendering: 'auto' }} data-testid="canvas-preview" />
-                </div>
-                {cropMode && cropRect && (
-                  <div
-                    className="absolute inset-2 cursor-crosshair touch-none"
-                    onPointerDown={beginCrop}
-                    onPointerMove={moveCrop}
-                    onPointerUp={endCrop}
-                    onPointerCancel={endCrop}
-                    data-testid="crop-overlay">
-
-                    <div onPointerDown={(event) => event.stopPropagation()} className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
-                      <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
-                        <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
-                        <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
-                        <span className="border-r border-[#f6bf7d]/35" /><span className="border-r border-[#f6bf7d]/35" /><span />
+                <div className="checkerboard relative overflow-hidden rounded-xl border border-[#303840] p-2 shadow-[0_24px_70px_rgba(0,0,0,.34)] w-full flex items-center justify-center min-h-[350px]">
+                  <div className="relative block max-w-full max-h-[calc(100dvh-230px)] h-auto min-w-[260px]">
+                    <canvas ref={canvasRef} className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain h-auto min-w-[260px]" style={{ imageRendering: 'auto' }} data-testid="canvas-preview" />
+                    {cropMode && cropRect && (
+                      <div
+                        className="absolute inset-0 cursor-crosshair touch-none"
+                        onPointerDown={beginCrop}
+                        onPointerMove={moveCrop}
+                        onPointerUp={endCrop}
+                        onPointerCancel={endCrop}
+                        data-testid="crop-overlay">
+                        <div onPointerDown={(event) => event.stopPropagation()} className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
+                          <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
+                            <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
+                            <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
+                            <span className="border-r border-[#f6bf7d]/35" /><span className="border-r border-[#f6bf7d]/35" /><span />
+                          </div>
+                          <span className="absolute -left-1 -top-1 h-3 w-3 border-l-2 border-t-2 border-[#f6bf7d]" />
+                          <span className="absolute -right-1 -top-1 h-3 w-3 border-r-2 border-t-2 border-[#f6bf7d]" />
+                          <span className="absolute -bottom-1 -left-1 h-3 w-3 border-b-2 border-l-2 border-[#f6bf7d]" />
+                          <span className="absolute -bottom-1 -right-1 h-3 w-3 border-b-2 border-r-2 border-[#f6bf7d]" />
+                          <span onPointerDown={(event) => beginResize(event, 'top-left')} className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'top')} className="absolute -left-1/2 -top-2 h-4 w-full cursor-ns-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'top-right')} className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'right')} className="absolute -right-2 -top-1/2 h-full w-4 cursor-ew-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'bottom-right')} className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'bottom')} className="absolute -bottom-2 -left-1/2 h-4 w-full cursor-ns-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'bottom-left')} className="absolute -bottom-2 -left-2 h-4 w-4 cursor-nesw-resize" />
+                          <span onPointerDown={(event) => beginResize(event, 'left')} className="absolute -left-2 -top-1/2 h-full w-4 cursor-ew-resize" />
+                        </div>
                       </div>
-                      <span className="absolute -left-1 -top-1 h-3 w-3 border-l-2 border-t-2 border-[#f6bf7d]" />
-                      <span className="absolute -right-1 -top-1 h-3 w-3 border-r-2 border-t-2 border-[#f6bf7d]" />
-                      <span className="absolute -bottom-1 -left-1 h-3 w-3 border-b-2 border-l-2 border-[#f6bf7d]" />
-                      <span className="absolute -bottom-1 -right-1 h-3 w-3 border-b-2 border-r-2 border-[#f6bf7d]" />
-                      <span onPointerDown={(event) => beginResize(event, 'top-left')} className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'top')} className="absolute -left-1/2 -top-2 h-4 w-full cursor-ns-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'top-right')} className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'right')} className="absolute -right-2 -top-1/2 h-full w-4 cursor-ew-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'bottom-right')} className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'bottom')} className="absolute -bottom-2 -left-1/2 h-4 w-full cursor-ns-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'bottom-left')} className="absolute -bottom-2 -left-2 h-4 w-4 cursor-nesw-resize" />
-                      <span onPointerDown={(event) => beginResize(event, 'left')} className="absolute -left-2 -top-1/2 h-full w-4 cursor-ew-resize" />
-                    </div>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             )}
           </div>
@@ -683,9 +790,8 @@ function PhotoEditor() {
         </section>
 
 {/*aside2*/}
-    <aside
-        className={`order-3 border-t border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${
-        isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
+  <aside className={`order-3 border-t border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${ isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
+ <div onClick={(event) => event.stopPropagation()}>
     <button
         type="button"
         onClick={() => setIsLooksOpen((prev) => !prev)}
@@ -698,6 +804,7 @@ function PhotoEditor() {
         Filters
         </p>
       </div>
+      
 
        <Sparkles
        size={16}
@@ -705,18 +812,18 @@ function PhotoEditor() {
        isLooksOpen ? "rotate-180" : "" }`}/>
     </button>
        {isLooksOpen && (
+         
          <div>
-
-          <div className="grid grid-cols-2 gap-2">
-            {filterOptions.map((option) => (
+           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+             {filterOptions.map((option) => (
               <button
                 key={option.name}
                 type="button"
                 onClick={() => updateControl('filter', option.name)}
                 disabled={!hasImage}
-                className={`filter-card rounded-lg border bg-[#20252b] p-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${controls.filter === option.name ? 'selected border-[#f3ad61] bg-[#2a2925]' : 'border-[#30363d]'}`}
+                className={`filter-card w-[100px] shrink-0 rounded-lg border bg-[#20252b] p-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${controls.filter === option.name ? 'selected border-[#f3ad61] bg-[#2a2925]' : 'border-[#30363d]'}`}
                 data-testid={`button-filter-${option.name.toLowerCase()}`}>
-                <span className="block h-11 w-full rounded-md" style={{ background: option.swatch, filter: option.name === 'Noir' ? 'grayscale(1)' : option.name === 'Cool' ? 'hue-rotate(16deg)' : undefined }} />
+                <span className="block h-7 w-full rounded-md" style={{ background: option.swatch, filter: option.name === 'Noir' ? 'grayscale(1)' : option.name === 'Cool' ? 'hue-rotate(16deg)' : undefined }} />
                 <span className="mt-2 block truncate px-1 text-[10px] font-bold text-[#dcd8cf]">{option.name}</span>
                 <span className="mt-0.5 block truncate px-1 pb-1 text-[9px] text-[#7f8788]">{option.description}</span>
               </button>
@@ -724,9 +831,10 @@ function PhotoEditor() {
           </div>
         </div>
        )}
+       </div>
           
-          <div className={`mt-5 border-t border-[#2a3036] pt-4 ${!hasImage ? 'opacity-40' : ''}`}>
-            <div className="mb-2 flex items-center justify-between">
+          <div className={`mt-4 border-t border-[#2a3036] pt-3 mb-0 ${!hasImage ? 'opacity-40' : ''}`}>
+            <div className="mb-1 flex items-center justify-between">
               <label htmlFor="filter-intensity" className="text-[11px] font-semibold text-[#d4d0c9]">Filter intensity</label>
               <span className="font-mono text-[10px] text-[#9fa3a1]">{controls.intensity}%</span>
             </div>
@@ -765,7 +873,7 @@ function PhotoEditor() {
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#d7d0c3]"><Maximize2 size={13} className="text-[#dc9f5b]" /> Export at full size</div>
             <p className="mt-1.5 text-[10px] leading-relaxed text-[#858b8d]">Your PNG keeps the source canvas dimensions and all current adjustments.</p>
           </div>
-        </aside>
+  </aside>
       </div>
 
       <footer className=" fixed bottom-0 left-0 z-50 w-full  flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">

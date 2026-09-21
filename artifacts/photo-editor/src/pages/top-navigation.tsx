@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { TopNavigation } from '../components/navigation/TopNavigation';
 
 type TextLayer = {
   id: number;
@@ -8,35 +7,90 @@ type TextLayer = {
   y: number;
   fontSize: number;
   color: string;
+
+  highlightedWords: {
+  start: number;
+  end: number;
+  color: string;
+}[];
+
   bold: boolean;
   italic: boolean;
   align: 'left' | 'center' | 'right';
   opacity: number;
 };
 
+type Tool = 'background' | 'photo' | 'size' | 'text';
+
 export default function PhotoMixerPage() {
   const backgroundInputRef = useRef<HTMLInputElement>(null);
   const photoInputRef = useRef<HTMLInputElement>(null);
+  const canvasAreaRef = useRef<HTMLDivElement>(null);
 
   const [background, setBackground] = useState<string | null>(null);
   const [photo, setPhoto] = useState<string | null>(null);
 
-  const [activeTool, setActiveTool] = useState<
-    'background' | 'photo' | 'size' | 'text'
-  >('background');
+  const [activeTool, setActiveTool] =
+    useState<Tool>('background');
 
-  const [textLayers, setTextLayers] = useState<TextLayer[]>([]);
-  const [selectedTextId, setSelectedTextId] = useState<number | null>(null);
+  const [textLayers, setTextLayers] =
+    useState<TextLayer[]>([]);
 
-  const [showTextPanel, setShowTextPanel] = useState(false);
+  const [selectedTextId, setSelectedTextId] =
+    useState<number | null>(null);
+
+  const [selectedWordRange, setSelectedWordRange] = useState<{
+  layerId: number;
+  start: number;
+  end: number;
+} | null>(null);
+
+  const [showTextPanel, setShowTextPanel] =
+    useState(false);
 
   const [newText, setNewText] = useState('');
-  const [textColor, setTextColor] = useState('#ffffff');
-  const [textSize, setTextSize] = useState(32);
-  const [textBold, setTextBold] = useState(false);
-  const [textItalic, setTextItalic] = useState(false);
+  const [textColor, setTextColor] =
+    useState('#ffffff');
+
+    const [wordColor, setWordColor] = useState('#ff0000');
+
+  const [textSize, setTextSize] =
+    useState(32);
+
+  const [textBold, setTextBold] =
+    useState(false);
+
+  const [textItalic, setTextItalic] =
+    useState(false);
+
   const [textAlign, setTextAlign] =
-    useState<'left' | 'center' | 'right'>('center');
+    useState<'left' | 'center' | 'right'>(
+      'center'
+    );
+
+  const [photoTransform, setPhotoTransform] =
+    useState({
+      x: 50,
+      y: 50,
+      width: 76,
+      rotation: 0,
+    });
+
+  const [canvasRotation, setCanvasRotation] =
+    useState(0);
+
+  const [dragging, setDragging] = useState<{
+    type: 'photo' | 'text';
+    id?: number;
+    startX: number;
+    startY: number;
+    originalX: number;
+    originalY: number;
+  } | null>(null);
+
+  // =========================
+  // BACKGROUND
+  // =========================
 
   const selectBackground = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -45,9 +99,19 @@ export default function PhotoMixerPage() {
 
     if (!file) return;
 
-    const url = URL.createObjectURL(file);
-    setBackground(url);
+    const nextUrl = URL.createObjectURL(file);
+
+    setBackground((oldUrl) => {
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      return nextUrl;
+    });
+
+    event.target.value = '';
   };
+
+  // =========================
+  // PHOTO
+  // =========================
 
   const selectPhoto = (
     event: React.ChangeEvent<HTMLInputElement>
@@ -56,9 +120,26 @@ export default function PhotoMixerPage() {
 
     if (!file) return;
 
-    const url = URL.createObjectURL(file);
-    setPhoto(url);
+    const nextUrl = URL.createObjectURL(file);
+
+    setPhoto((oldUrl) => {
+      if (oldUrl) URL.revokeObjectURL(oldUrl);
+      return nextUrl;
+    });
+
+    setPhotoTransform({
+      x: 50,
+      y: 50,
+      width: 76,
+      rotation: 0,
+    });
+
+    event.target.value = '';
   };
+
+  // =========================
+  // TEXT
+  // =========================
 
   const addText = () => {
     const value = newText.trim();
@@ -67,34 +148,76 @@ export default function PhotoMixerPage() {
 
     const id = Date.now();
 
-    const layer: TextLayer = {
+    const newLayer: TextLayer = {
       id,
       text: value,
       x: 50,
       y: 50,
       fontSize: textSize,
       color: textColor,
+        highlightedWords: [],
       bold: textBold,
       italic: textItalic,
       align: textAlign,
       opacity: 1,
     };
 
-    setTextLayers((layers) => [...layers, layer]);
+    setTextLayers((layers) => [
+      ...layers,
+      newLayer,
+    ]);
+
     setSelectedTextId(id);
     setNewText('');
     setShowTextPanel(false);
+    setActiveTool('text');
   };
 
   const updateSelectedText = (
-    changes: Partial<TextLayer>
+    updates: Partial<TextLayer>
   ) => {
     if (selectedTextId === null) return;
+            
+
+  const applyWordColor = (color: string) => {
+  if (!selectedWordRange) return;
+
+  setTextLayers((layers) =>
+    layers.map((layer) => {
+      if (layer.id !== selectedWordRange.layerId) {
+        return layer;
+      }
+
+      const newHighlight = {
+        start: selectedWordRange.start,
+        end: selectedWordRange.end,
+        color,
+      };
+
+      const remainingHighlights = layer.highlightedWords.filter(
+        (highlight) =>
+          highlight.end <= selectedWordRange.start ||
+          highlight.start >= selectedWordRange.end
+      );
+
+      return {
+        ...layer,
+        highlightedWords: [
+          ...remainingHighlights,
+          newHighlight,
+        ],
+      };
+    })
+  );
+};
 
     setTextLayers((layers) =>
       layers.map((layer) =>
         layer.id === selectedTextId
-          ? { ...layer, ...changes }
+          ? {
+              ...layer,
+              ...updates,
+            }
           : layer
       )
     );
@@ -104,11 +227,188 @@ export default function PhotoMixerPage() {
     if (selectedTextId === null) return;
 
     setTextLayers((layers) =>
-      layers.filter((layer) => layer.id !== selectedTextId)
+      layers.filter(
+        (layer) =>
+          layer.id !== selectedTextId
+      )
     );
 
     setSelectedTextId(null);
   };
+
+  // =========================
+  // POINTER DOWN
+  // =========================
+
+  const handlePointerDown = (
+    event: React.PointerEvent,
+    type: 'photo' | 'text',
+    id?: number
+  ) => {
+    const canvas = canvasAreaRef.current;
+
+    if (!canvas) return;
+
+    let currentX = 50;
+    let currentY = 50;
+
+    if (type === 'photo') {
+      currentX = photoTransform.x;
+      currentY = photoTransform.y;
+    }
+
+    if (
+      type === 'text' &&
+      id !== undefined
+    ) {
+      const layer = textLayers.find(
+        (item) => item.id === id
+      );
+
+      if (layer) {
+        currentX = layer.x;
+        currentY = layer.y;
+      }
+    }
+
+    event.currentTarget.setPointerCapture(
+      event.pointerId
+    );
+
+    setDragging({
+      type,
+      id,
+      startX: event.clientX,
+      startY: event.clientY,
+      originalX: currentX,
+      originalY: currentY,
+    });
+  };
+
+  // =========================
+  // POINTER MOVE
+  // =========================
+
+  const handlePointerMove = (
+    event: React.PointerEvent
+  ) => {
+    if (!dragging) return;
+
+    const canvas = canvasAreaRef.current;
+
+    if (!canvas) return;
+
+    const rect =
+      canvas.getBoundingClientRect();
+
+    const deltaX =
+      ((event.clientX - dragging.startX) /
+        rect.width) *
+      100;
+
+    const deltaY =
+      ((event.clientY - dragging.startY) /
+        rect.height) *
+      100;
+
+    const newX = Math.max(
+      0,
+      Math.min(
+        100,
+        dragging.originalX + deltaX
+      )
+    );
+
+    const newY = Math.max(
+      0,
+      Math.min(
+        100,
+        dragging.originalY + deltaY
+      )
+    );
+
+    if (dragging.type === 'photo') {
+      setPhotoTransform((current) => ({
+        ...current,
+        x: newX,
+        y: newY,
+      }));
+    }
+
+    if (
+      dragging.type === 'text' &&
+      dragging.id !== undefined
+    ) {
+      setTextLayers((layers) =>
+        layers.map((layer) =>
+          layer.id === dragging.id
+            ? {
+                ...layer,
+                x: newX,
+                y: newY,
+              }
+            : layer
+        )
+      );
+    }
+  };
+
+  // =========================
+  // POINTER UP
+  // =========================
+
+  const handlePointerUp = (
+    event: React.PointerEvent
+  ) => {
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId
+      );
+    }
+
+    setDragging(null);
+  };
+
+  // =========================
+  // ROTATE CANVAS
+  // =========================
+
+  const rotateCanvas = () => {
+    setCanvasRotation(
+      (rotation) =>
+        (rotation + 90) % 360
+    );
+  };
+
+  // =========================
+  // DONE / EXPORT
+  // =========================
+
+  const handleDone = () => {
+    const canvas =
+      canvasAreaRef.current;
+
+    if (!canvas) return;
+
+    alert(
+      'Photo Mixer editing completed.'
+    );
+  };
+
+  // =========================
+  // SELECTED TEXT
+  // =========================
+
+  const selectedText =
+    textLayers.find(
+      (layer) =>
+        layer.id === selectedTextId
+    ) ?? null;
+    
 
   useEffect(() => {
     return () => {
@@ -120,118 +420,271 @@ export default function PhotoMixerPage() {
         URL.revokeObjectURL(photo);
       }
     };
-  }, [background, photo]);
+  }, []);
+                   
+                const handleTextSelection = (layerId: number) => {
+  const selection = window.getSelection();
+
+  if (!selection || selection.rangeCount === 0) return;
+
+  const selectedText = selection.toString();
+
+  if (!selectedText.trim()) return;
+
+  const range = selection.getRangeAt(0);
+
+  const container = document.querySelector(
+    `[data-text-layer-id="${layerId}"]`
+  );
+
+  if (!container || !container.contains(range.commonAncestorContainer)) {
+    return;
+  }
+
+  const preRange = range.cloneRange();
+
+  preRange.selectNodeContents(container);
+  preRange.setEnd(range.startContainer, range.startOffset);
+
+  const start = preRange.toString().length;
+  const end = start + selectedText.length;
+
+  setSelectedWordRange({
+    layerId,
+    start,
+    end,
+  });
+};
+
+const applyWordColor = (color: string) => {
+  if (!selectedWordRange) return;
+
+  setTextLayers((layers) =>
+    layers.map((layer) => {
+      if (layer.id !== selectedWordRange.layerId) {
+        return layer;
+      }
+
+      const newHighlight = {
+        start: selectedWordRange.start,
+        end: selectedWordRange.end,
+        color,
+      };
+
+      const remainingHighlights = layer.highlightedWords.filter(
+        (highlight) =>
+          highlight.end <= selectedWordRange.start ||
+          highlight.start >= selectedWordRange.end
+      );
+
+      return {
+        ...layer,
+        highlightedWords: [
+          ...remainingHighlights,
+          newHighlight,
+        ],
+      };
+    })
+  );
+};
 
   return (
-    <div className="fixed inset-0 flex flex-col overflow-hidden bg-[#2b3238] text-white">
+    <div className="fixed inset-0 z-50 flex h-screen w-full flex-col overflow-hidden bg-[#111111] text-white">
 
-      {/* Top Header */}
-      <header className="flex h-[64px] shrink-0 items-center justify-between bg-[#20242c] px-4">
+      {/* ================= HEADER ================= */}
 
-        <a
-          href="/"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-3xl text-white active:bg-white/10"
-          aria-label="Back"
+      <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#171717] px-3 sm:px-5">
+
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          className="flex items-center gap-1 rounded-lg px-2 py-2 text-sm font-semibold text-white/80 hover:bg-white/10"
         >
-          ←
-        </a>
+          <span className="text-xl">
+            ‹
+          </span>
 
-        <h1 className="text-[20px] font-medium">
+          <span className="hidden sm:inline">
+            Back
+          </span>
+        </button>
+
+        <h1 className="text-base font-bold sm:text-lg">
           Photo Mixer
         </h1>
 
         <button
           type="button"
-          className="flex h-11 w-11 items-center justify-center text-[30px] text-white active:scale-95"
-          aria-label="Done"
+          onClick={handleDone}
+          className="rounded-lg bg-[#f3ad61] px-4 py-2 text-xs font-bold text-black transition hover:opacity-90 sm:text-sm"
         >
-          ✓
+          Done
         </button>
-
       </header>
 
-      {/* Editor Area */}
-      <main className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden">
+      {/* ================= EDITOR ================= */}
 
-        {/* Layers Button */}
-        <button
-          type="button"
-          className="absolute left-0 top-8 z-30 flex h-14 w-16 items-center justify-center rounded-r-full bg-[#20242c] text-3xl active:bg-[#343a43]"
-          aria-label="Layers"
-        >
-          ▱
-        </button>
+      <main className="flex min-h-0 flex-1 flex-col items-center overflow-auto bg-[#0d0d0d] pb-24">
 
-        {/* Rotate Button */}
-        <button
-          type="button"
-          className="absolute right-0 top-8 z-30 flex h-14 w-16 items-center justify-center rounded-l-full bg-[#20242c] text-3xl active:bg-[#343a43]"
-          aria-label="Rotate"
-        >
-          ↻
-        </button>
+        {/* TOP ACTIONS */}
 
-        {/* Canvas */}
+        <div className="flex w-full max-w-[650px] items-center justify-between px-3 py-3">
+
+          <button
+            type="button"
+            onClick={() => {
+              setSelectedTextId(null);
+              setShowTextPanel(false);
+            }}
+            className="rounded-lg border border-white/10 bg-[#1b1b1b] px-3 py-2 text-xs font-semibold text-white/80"
+          >
+            Layers
+          </button>
+
+          <button
+            type="button"
+            onClick={rotateCanvas}
+            className="rounded-lg border border-white/10 bg-[#1b1b1b] px-3 py-2 text-xs font-semibold text-white/80"
+          >
+            ↻ Rotate
+          </button>
+        </div>
+
+        {/* ================= CANVAS ================= */}
+
         <div
+          ref={canvasAreaRef}
           id="photo-mixer-canvas"
-          className="relative aspect-[3/4] w-[94vw] max-w-[520px] overflow-hidden bg-[#d9d9d9] shadow-2xl"
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+          className="relative aspect-[3/4] w-[94vw] max-w-[520px] touch-none overflow-hidden bg-[#d9d9d9] shadow-2xl"
+          style={{
+            transform: `rotate(${canvasRotation}deg)`,
+          }}
         >
 
-          {/* Background */}
+          {/* BACKGROUND */}
+
           {background ? (
             <img
               src={background}
               alt="Background"
-              className="absolute inset-0 h-full w-full object-cover"
               draggable={false}
+              className="absolute inset-0 h-full w-full select-none object-cover"
             />
           ) : (
             <button
               type="button"
-              onClick={() => backgroundInputRef.current?.click()}
-              className="absolute inset-0 flex flex-col items-center justify-center bg-[#3a4249] text-white/40"
+              onClick={() =>
+                backgroundInputRef.current?.click()
+              }
+              className="absolute inset-0 flex flex-col items-center justify-center bg-[#d9d9d9] text-black/50"
             >
-              <span className="text-5xl">＋</span>
-              <span className="mt-2 text-sm">
+              <span className="text-4xl">
+                +
+              </span>
+
+              <span className="mt-1 text-sm font-semibold">
                 Add Background
               </span>
             </button>
           )}
 
-          {/* Added Photo */}
-          {photo && (
-            <div className="absolute left-[12%] top-[15%] z-10 w-[76%]">
+          {/* PHOTO */}
 
+          {photo && (
+            <div
+              onPointerDown={(event) =>
+                handlePointerDown(
+                  event,
+                  'photo'
+                )
+              }
+              className="absolute z-10 touch-none"
+              style={{
+                left: `${photoTransform.x}%`,
+                top: `${photoTransform.y}%`,
+                width: `${photoTransform.width}%`,
+                transform:
+                  'translate(-50%, -50%)',
+                rotate: `${photoTransform.rotation}deg`,
+              }}
+            >
               <img
                 src={photo}
-                alt="Added photo"
-                className="block w-full select-none object-contain"
+                alt="Selected"
                 draggable={false}
+                className="block h-auto w-full select-none object-contain"
               />
 
-              {/* Selection Border */}
               <div className="pointer-events-none absolute inset-0 border-2 border-dashed border-[#ef4444]" />
 
-              {/* Resize Handle */}
-              <div className="absolute -bottom-2 -right-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-white text-xs text-black">
-                ↗
-              </div>
+              {/* RESIZE HANDLE */}
 
-              {/* Rotate Handle */}
-              <div className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border-2 border-black bg-white text-xs text-black">
-                ↻
-              </div>
+              <button
+                type="button"
+                aria-label="Resize photo"
+                className="absolute -bottom-3 -right-3 h-6 w-6 rounded-full border-2 border-white bg-[#ef4444] shadow"
+                onPointerDown={(event) =>
+                  event.stopPropagation()
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
 
+                  setPhotoTransform(
+                    (current) => ({
+                      ...current,
+                      width: Math.min(
+                        100,
+                        current.width + 5
+                      ),
+                    })
+                  );
+                }}
+              />
+
+              {/* ROTATE HANDLE */}
+
+              <button
+                type="button"
+                aria-label="Rotate photo"
+                className="absolute -top-3 left-1/2 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-white bg-[#f3ad61] shadow"
+                onPointerDown={(event) =>
+                  event.stopPropagation()
+                }
+                onClick={(event) => {
+                  event.stopPropagation();
+
+                  setPhotoTransform(
+                    (current) => ({
+                      ...current,
+                      rotation:
+                        current.rotation +
+                        15,
+                    })
+                  );
+                }}
+              />
             </div>
           )}
 
-          {/* Text Layers */}
+                            {/* TEXT LAYERS section start*/}
+
           {textLayers.map((layer) => (
-            <button
+          <button
               key={layer.id}
+              data-text-layer-id={layer.id}
               type="button"
-              onClick={() => setSelectedTextId(layer.id)}
-              className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 whitespace-pre-wrap ${
+             onPointerDown={() => {
+             setSelectedTextId(layer.id);
+             setShowTextPanel(true);
+             }}
+
+              onMouseUp={() => handleTextSelection(layer.id)}
+              onTouchEnd={() => handleTextSelection(layer.id)}
+
+              className={`absolute z-20 -translate-x-1/2 -translate-y-1/2 whitespace-pre-wrap   ${
                 selectedTextId === layer.id
                   ? 'rounded border border-dashed border-[#f3ad61] px-2 py-1'
                   : ''
@@ -241,199 +694,448 @@ export default function PhotoMixerPage() {
                 top: `${layer.y}%`,
                 color: layer.color,
                 fontSize: `${layer.fontSize}px`,
-                fontWeight: layer.bold ? 700 : 400,
-                fontStyle: layer.italic ? 'italic' : 'normal',
+                fontWeight: layer.bold
+                  ? 700
+                  : 400,
+                fontStyle: layer.italic
+                  ? 'italic'
+                  : 'normal',
                 textAlign: layer.align,
                 opacity: layer.opacity,
+                userSelect: 'text',
               }}
             >
-              {layer.text}
-            </button>
-          ))}
+              {(() => {
+        const highlights = [...layer.highlightedWords].sort(
+        (a, b) => a.start - b.start
+        );
 
+         if (highlights.length === 0) {
+         return layer.text;
+        }
+
+        const parts: React.ReactNode[] = [];
+        let cursor = 0;
+
+       highlights.forEach((highlight, index) => {
+      if (highlight.start > cursor) {
+        parts.push(
+        <span key={`normal-${index}`}>
+          {layer.text.slice(cursor, highlight.start)}
+        </span>
+      );
+    }
+
+    parts.push(
+      <span
+        key={`highlight-${index}`}
+        style={{
+          color: highlight.color,
+        }}
+      >
+        {layer.text.slice(
+          highlight.start,
+          highlight.end
+        )}
+      </span>
+    );
+
+    cursor = highlight.end;
+    });
+
+     if (cursor < layer.text.length) {
+     parts.push(
+      <span key="normal-end">
+        {layer.text.slice(cursor)}
+      </span>
+     );
+    }
+
+     return parts;
+       })()}
+     
+        {selectedTextId === layer.id && (
+  <span
+    role="button"
+    tabIndex={0}
+    onPointerDown={(event) => {
+      event.stopPropagation();
+      setTextLayers((layers) =>
+        layers.filter((item) => item.id !== layer.id)
+      );
+      setSelectedTextId(null);
+      setShowTextPanel(false);
+    }}
+    className="absolute -right-3 -top-3 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-sm font-bold text-white shadow-md"
+    >
+    ×
+    </span>
+    )}
+  </button>
+          ))}
         </div>
 
-      </main>
+        {/* ================= TEXT PANEL ================= */}
 
-      {/* Text Editing Panel */}
-      {showTextPanel && (
-        <div className="absolute bottom-[82px] left-2 right-2 z-50 rounded-2xl border border-white/10 bg-[#20242c] p-3 shadow-2xl">
+        {showTextPanel && (
+          <div className="mt-4 w-[94vw] max-w-[520px] rounded-2xl border border-white/10 bg-[#181818] p-4 shadow-xl">
 
-          <div className="mb-3 flex items-center justify-between">
-            <h2 className="text-sm font-semibold">
-              Add Text
-            </h2>
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="text-sm font-bold">
+               {selectedTextId !== null ? 'Edit Text' : 'Add Text'}
+              </h2>
 
-            <button
-              type="button"
-              onClick={() => setShowTextPanel(false)}
-              className="text-xl text-white/60"
-            >
-              ×
-            </button>
-          </div>
-
-          {/* Text Input */}
-          <textarea
-            value={newText}
-            onChange={(e) => setNewText(e.target.value)}
-            placeholder="Write your text..."
-            rows={2}
-            className="w-full resize-none rounded-lg border border-white/10 bg-[#15181d] p-3 text-sm text-white outline-none focus:border-[#f3ad61]"
-          />
-
-          {/* Controls */}
-          <div className="mt-3 flex gap-2 overflow-x-auto pb-1">
-
-            <button
-              type="button"
-              onClick={() => setTextBold((value) => !value)}
-              className={`min-w-10 rounded-lg px-3 py-2 text-sm font-bold ${
-                textBold
-                  ? 'bg-[#f3ad61] text-black'
-                  : 'bg-white/10'
-              }`}
-            >
-              B
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTextItalic((value) => !value)}
-              className={`min-w-10 rounded-lg px-3 py-2 text-sm italic ${
-                textItalic
-                  ? 'bg-[#f3ad61] text-black'
-                  : 'bg-white/10'
-              }`}
-            >
-              I
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTextAlign('left')}
-              className={`min-w-10 rounded-lg px-3 py-2 ${
-                textAlign === 'left'
-                  ? 'bg-[#f3ad61] text-black'
-                  : 'bg-white/10'
-              }`}
-            >
-              ≡
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTextAlign('center')}
-              className={`min-w-10 rounded-lg px-3 py-2 ${
-                textAlign === 'center'
-                  ? 'bg-[#f3ad61] text-black'
-                  : 'bg-white/10'
-              }`}
-            >
-              ≡
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setTextAlign('right')}
-              className={`min-w-10 rounded-lg px-3 py-2 ${
-                textAlign === 'right'
-                  ? 'bg-[#f3ad61] text-black'
-                  : 'bg-white/10'
-              }`}
-            >
-              ≡
-            </button>
-
-          </div>
-
-          {/* Size */}
-          <div className="mt-3">
-            <div className="mb-1 flex justify-between text-xs text-white/60">
-              <span>Text Size</span>
-              <span>{textSize}px</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setShowTextPanel(false)
+                }
+                className="rounded-lg px-2 py-1 text-white/60 hover:bg-white/10"
+              >
+                ✕
+              </button>
             </div>
 
-            <input
-              type="range"
-              min="12"
-              max="100"
-              value={textSize}
-              onChange={(e) => setTextSize(Number(e.target.value))}
-              className="h-2 w-full accent-[#f3ad61]"
-            />
+            <textarea
+          value={
+          selectedTextId !== null
+          ? (textLayers.find(
+          (layer) => layer.id === selectedTextId
+          )?.text ?? ''): newText}
+          onChange={(event) => {
+          if (selectedTextId !== null) {
+          updateSelectedText({
+          text: event.target.value,
+          });
+          } else {
+        setNewText(event.target.value);
+       }
+      }}
+      placeholder="Enter your text..."
+      rows={3}
+      className="w-full resize-none rounded-xl border border-white/10 bg-[#101010] p-3 text-sm text-white outline-none placeholder:text-white/30 focus:border-[#f3ad61]"
+      />
+            {/* TEXT OPTIONS */}
+
+            <div className="mt-3 flex flex-wrap gap-2">
+
+              <button
+                type="button"
+               onClick={() => {
+  if (selectedTextId !== null) {
+    const currentText = textLayers.find(
+      (layer) => layer.id === selectedTextId
+    );
+
+    if (currentText) {
+      updateSelectedText({
+        bold: !currentText.bold,
+      });
+    }
+  } else {
+    setTextBold((value) => !value);
+  }
+}}
+               className={`rounded-lg border px-3 py-2 text-xs font-bold ${
+  selectedTextId !== null
+    ? textLayers.find(
+        (layer) => layer.id === selectedTextId
+      )?.bold
+      ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+      : 'border-white/10 bg-[#222] text-white'
+    : textBold
+      ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+      : 'border-white/10 bg-[#222] text-white'
+}`}
+              >
+                B
+              </button>
+
+              <button
+                type="button"
+          onClick={() => {
+  if (selectedTextId !== null) {
+    const currentText = textLayers.find(
+      (layer) => layer.id === selectedTextId
+    );
+
+    if (currentText) {
+      updateSelectedText({
+        italic: !currentText.italic,
+      });
+    }
+  } else {
+    setTextItalic((value) => !value);
+  }
+}}
+                className={`rounded-lg border px-3 py-2 text-xs italic ${
+  selectedTextId !== null
+    ? textLayers.find(
+        (layer) => layer.id === selectedTextId
+      )?.italic
+      ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+      : 'border-white/10 bg-[#222] text-white'
+    : textItalic
+      ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+      : 'border-white/10 bg-[#222] text-white'
+}`}
+              >
+                I
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setTextAlign('left')
+                }
+                className={`rounded-lg border px-3 py-2 text-xs ${
+                  textAlign === 'left'
+                    ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+                    : 'border-white/10 bg-[#222]'
+                }`}
+              >
+                Left
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setTextAlign('center')
+                }
+                className={`rounded-lg border px-3 py-2 text-xs ${
+                  textAlign === 'center'
+                    ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+                    : 'border-white/10 bg-[#222]'
+                }`}
+              >
+                Center
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setTextAlign('right')
+                }
+                className={`rounded-lg border px-3 py-2 text-xs ${
+                  textAlign === 'right'
+                    ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+                    : 'border-white/10 bg-[#222]'
+                }`}
+              >
+                Right
+              </button>
+            </div>
+
+            {/* SIZE */}
+
+            <div className="mt-4">
+              <div className="mb-2 flex justify-between text-xs text-white/60">
+                <span>
+                  Text Size
+                </span>
+
+                <span>
+                  {textSize}px
+                </span>
+              </div>
+
+              <input
+                type="range"
+                min="12"
+                max="100"
+                value={textSize}
+                onChange={(event) =>
+                  setTextSize(
+                    Number(
+                      event.target.value
+                    )
+                  )
+                }
+                className="w-full"
+              />
+            </div>
+
+            {/* COLOR */}
+
+            <div className="mt-4 flex items-center justify-between">
+
+              <span className="text-xs text-white/60">
+                Text Color
+              </span>
+
+              <input type="color" value={selectedText?.color ?? '#ffffff'}
+               onChange={(event) =>
+               updateSelectedText({
+               color: event.target.value,
+               })
+              }/>
+
+            <div className="flex items-center gap-2">
+  <span className="text-xs font-semibold text-white/70">
+    Word Color
+  </span>
+
+  <input
+    type="color"
+    value={wordColor}
+    onChange={(event) => {
+      const color = event.target.value;
+      setWordColor(color);
+      applyWordColor(color);
+    }}
+  />
+</div>
+
+            </div>
+
+            <button
+              type="button"
+              onClick={addText}
+              disabled={!newText.trim()}
+              className="mt-4 w-full rounded-xl bg-[#f3ad61] py-3 text-sm font-bold text-black disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Add Text
+            </button>
           </div>
+        )}
 
-          {/* Color */}
-          <div className="mt-3 flex items-center justify-between">
-            <span className="text-xs text-white/60">
-              Text Color
-            </span>
+        {/* ================= SELECTED TEXT CONTROLS ================= */}
 
-            <input
-              type="color"
-              value={textColor}
-              onChange={(e) => setTextColor(e.target.value)}
-              className="h-9 w-12 cursor-pointer rounded border-0 bg-transparent"
-            />
-          </div>
+       {selectedText && !showTextPanel && (
+  <div className="mt-4 w-[94vw] max-w-[520px] rounded-xl border border-white/10 bg-[#181818] p-3">
 
-          {/* Add */}
-          <button
-            type="button"
-            onClick={addText}
-            className="mt-4 min-h-[44px] w-full rounded-xl bg-[#f3ad61] text-sm font-semibold text-black active:scale-[0.99]"
-          >
-            Add Text
-          </button>
+    <div className="flex items-center gap-2 overflow-x-auto">
 
+      <button
+        type="button"
+        onClick={() =>
+          updateSelectedText({
+            bold: !selectedText.bold,
+          })
+        }
+        className={`shrink-0 rounded-lg px-3 py-2 text-xs font-bold ${
+          selectedText.bold
+            ? 'bg-[#f3ad61] text-black'
+            : 'bg-[#252525] text-white'
+        }`}
+      >
+        B
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          updateSelectedText({
+            italic: !selectedText.italic,
+          })
+        }
+        className={`shrink-0 rounded-lg px-3 py-2 text-xs italic ${
+          selectedText.italic
+            ? 'bg-[#f3ad61] text-black'
+            : 'bg-[#252525] text-white'
+        }`}
+      >
+        I
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          updateSelectedText({ align: 'left' })
+        }
+        className={`shrink-0 rounded-lg px-3 py-2 text-xs ${
+          selectedText.align === 'left'
+            ? 'bg-[#f3ad61] text-black'
+            : 'bg-[#252525] text-white'
+        }`}
+      >
+        Left
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          updateSelectedText({ align: 'center' })
+        }
+        className={`shrink-0 rounded-lg px-3 py-2 text-xs ${
+          selectedText.align === 'center'
+            ? 'bg-[#f3ad61] text-black'
+            : 'bg-[#252525] text-white'
+        }`}
+      >
+        Center
+      </button>
+
+      <button
+        type="button"
+        onClick={() =>
+          updateSelectedText({ align: 'right' })
+        }
+        className={`shrink-0 rounded-lg px-3 py-2 text-xs ${
+          selectedText.align === 'right'
+            ? 'bg-[#f3ad61] text-black'
+            : 'bg-[#252525] text-white'
+        }`}
+      >
+        Right
+      </button>
+
+      <button
+        type="button"
+        onClick={deleteSelectedText}
+        className="ml-auto shrink-0 rounded-lg bg-[#ef4444] px-3 py-2 text-xs font-bold text-white"
+      >
+        Delete
+      </button>
+    </div>
+
+    <div className="mt-4 flex items-center gap-4">
+
+      <div className="flex-1">
+        <div className="mb-1 flex justify-between text-[11px] text-white/60">
+          <span>Size</span>
+          <span>{selectedText.fontSize}px</span>
         </div>
-      )}
 
-      {/* Selected Text Controls */}
-      {selectedTextId !== null && !showTextPanel && (
-        <div className="absolute bottom-[82px] left-2 right-2 z-40 flex items-center gap-2 overflow-x-auto rounded-xl bg-[#20242c] p-2">
+        <input
+          type="range"
+          min="12"
+          max="100"
+          value={selectedText.fontSize}
+          onChange={(event) =>
+            updateSelectedText({
+              fontSize: Number(event.target.value),
+            })
+          }
+          className="w-full"
+        />
+      </div>
 
-          <button
-            type="button"
-            onClick={() =>
-              updateSelectedText({
-                bold: !textLayers.find(
-                  (layer) => layer.id === selectedTextId
-                )?.bold,
-              })
-            }
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm font-bold"
-          >
-            B
-          </button>
+      <div className="flex shrink-0 flex-col items-center gap-1">
+        <span className="text-[11px] text-white/60">
+          Color
+        </span>
 
-          <button
-            type="button"
-            onClick={() =>
-              updateSelectedText({
-                italic: !textLayers.find(
-                  (layer) => layer.id === selectedTextId
-                )?.italic,
-              })
-            }
-            className="rounded-lg bg-white/10 px-4 py-2 text-sm italic"
-          >
-            I
-          </button>
+        <input
+          type="color"
+          value={selectedText.color}
+          onChange={(event) =>
+            updateSelectedText({
+              color: event.target.value,
+            })
+          }
+          className="h-9 w-12 cursor-pointer rounded-lg border-0 bg-transparent"
+        />
+      </div>
 
-          <button
-            type="button"
-            onClick={deleteSelectedText}
-            className="rounded-lg bg-red-500/20 px-4 py-2 text-sm text-red-300"
-          >
-            Delete
-          </button>
+    </div>
+  </div>
+)}
+        
+      </main>
 
-        </div>
-      )}
+      {/* ================= HIDDEN INPUTS ================= */}
 
-      {/* Hidden Inputs */}
       <input
         ref={backgroundInputRef}
         type="file"
@@ -450,78 +1152,125 @@ export default function PhotoMixerPage() {
         onChange={selectPhoto}
       />
 
-      {/* Bottom Toolbar */}
-      <nav className="z-50 grid h-[82px] shrink-0 grid-cols-4 border-t border-white/5 bg-[#20242c]">
+      {/* ================= BOTTOM TOOLBAR ================= */}
 
-        {/* Background */}
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTool('background');
-            backgroundInputRef.current?.click();
-          }}
-          className={`flex flex-col items-center justify-center gap-1 ${
-            activeTool === 'background'
-              ? 'text-white'
-              : 'text-white/60'
-          }`}
-        >
-          <span className="text-2xl">▣</span>
-          <span className="text-xs">Background</span>
-        </button>
+      <footer className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/10 bg-[#171717]/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur">
 
-        {/* Photo */}
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTool('photo');
-            photoInputRef.current?.click();
-          }}
-          className={`flex flex-col items-center justify-center gap-1 ${
-            activeTool === 'photo'
-              ? 'text-white'
-              : 'text-white/60'
-          }`}
-        >
-          <span className="text-2xl">▣</span>
-          <span className="text-xs">Photo</span>
-        </button>
+        <div className="mx-auto flex max-w-[650px] items-center justify-around">
 
-        {/* Size */}
-        <button
-          type="button"
-          onClick={() => setActiveTool('size')}
-          className={`flex flex-col items-center justify-center gap-1 ${
-            activeTool === 'size'
-              ? 'text-white'
-              : 'text-white/60'
-          }`}
-        >
-          <span className="text-2xl">↗</span>
-          <span className="text-xs">Size</span>
-        </button>
+          {/* BACKGROUND */}
 
-        {/* Text */}
-        <button
-          type="button"
-          onClick={() => {
-            setActiveTool('text');
-            setShowTextPanel(true);
-          }}
-          className={`flex flex-col items-center justify-center gap-1 ${
-            activeTool === 'text'
-              ? 'text-[#f3ad61]'
-              : 'text-white/60'
-          }`}
-        >
-          <span className="text-2xl font-bold">T</span>
-          <span className="text-xs">Text</span>
-        </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTool(
+                'background'
+              );
+              backgroundInputRef.current?.click();
+            }}
+            className={`flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold ${
+              activeTool ===
+              'background'
+                ? 'bg-white/10 text-[#f3ad61]'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-lg">
+              ▣
+            </span>
 
-      </nav>
+            <span>
+              Background
+            </span>
+          </button>
 
+          {/* PHOTO */}
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTool('photo');
+              photoInputRef.current?.click();
+            }}
+            className={`flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold ${
+              activeTool === 'photo'
+                ? 'bg-white/10 text-[#f3ad61]'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-lg">
+              ▧
+            </span>
+
+            <span>
+              Photo
+            </span>
+          </button>
+
+                                {/* SIZE section start */}
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTool('size');
+
+              if (photo) {
+                setPhotoTransform(
+                  (current) => ({
+                    ...current,
+                    width:
+                      current.width >=
+                      100
+                        ? 40
+                        : current.width +
+                          10,
+                  })
+                );
+              }
+            }}
+            className={`flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold ${
+              activeTool === 'size'
+                ? 'bg-white/10 text-[#f3ad61]'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-lg">
+              ⤢
+            </span>
+
+            <span>
+              Size
+            </span>
+          </button>
+
+          {/* TEXT */}
+
+          <button
+            type="button"
+            onClick={() => {
+              setActiveTool('text');
+              setShowTextPanel(
+                (value) => !value
+              );
+              setSelectedTextId(null);
+            }}
+            className={`flex min-w-[70px] flex-col items-center gap-1 rounded-xl px-2 py-2 text-[10px] font-semibold ${
+              activeTool === 'text'
+                ? 'bg-white/10 text-[#f3ad61]'
+                : 'text-white/60'
+            }`}
+          >
+            <span className="text-lg">
+              T
+            </span>
+
+            <span>
+              Text
+            </span>
+          </button>
+
+        </div>
+      </footer>
     </div>
   );
 }
-
-
