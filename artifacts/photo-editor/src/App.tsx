@@ -133,7 +133,7 @@ function AdjustmentRow({
 }) {
   const progress = `${((value - min) / (max - min)) * 100}%`;
   return (
-    <div className={`space-y-2.5 ${disabled ? 'opacity-40' : ''}`}>
+    <div className={`space-y-0 ${disabled ? 'opacity-40' : ''}`}>
       <div className="flex items-center justify-between text-[11px]">
         <label className="flex items-center gap-2 font-semibold tracking-wide text-[#d4d0c9]">
           <span className="text-[#eaaa64]">{icon}</span>{label}
@@ -173,7 +173,7 @@ function PhotoEditor() {
   const [controls, setControls] = useState<Controls>(defaultControls);
   const [rotation, setRotation] = useState(0);
   const [cropMode, setCropMode] = useState(false);
-  const [showAdjustments, setShowAdjustments] = useState(true);
+  const [showAdjustments, setShowAdjustments] = useState(false);
   useEffect(() => {
   if (!showAdjustments) return;
 
@@ -527,33 +527,42 @@ function PhotoEditor() {
 
   return (
     <main className="min-h-[100dvh] pb-16 bg-[#1d3255] text-[#ede7db]">
-      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-3 sm:px-7">
+      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-2 sm:px-7">
         <div className="flex items-center gap-3">
         
-<div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
-  <img
-    src={logo}
-    alt="Logo"
-    className="h-full w-full object-cover"/>
-</div>
+     <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
+     <img
+     src={logo}
+     alt="Logo"
+     className="h-full w-full object-cover"/>
+     </div>
 
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Photo-EQuality</h1>
               <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>
+
+            <div className="ml-auto flex items-center">
+              <button type="button"onClick={downloadImage}disabled={!hasImage}
+               className="control-button flex items-center justify-center rounded-md bg-[#f1ae62] ml-8.5 px-2 py-1.5 text-[9px] gap-0.5 font-bold text-[#24272a] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-10"
+               data-testid="button-download">
+               <Download size={14} />Save{/*<ArrowUpRight size={19}/>*/}
+              </button>
+            </div>
+
             </div>
             <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
           </div>
         </div>
         <TopNavigation>
-          <div className="items-center grid w-full px-2 py-1.5 grid-cols-5 gap-3">
-          <a href="/nav/mixer" className="flex items-center justify-center rounded-md h-7 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
-          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Side</a>
-          <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mobile</a>
+          <div className="items-center grid w-full px-2 py-1 grid-cols-5 gap-3">
+          <a href="/nav/mixer" className="flex items-center justify-center rounded-md h-6 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
+          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Side</a>
+          <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mobile</a>
           {/*<a href="/nav/breadcrumb" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
           <a href="/nav/bottom" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
-          <a href="/nav/orbit" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
-          <a href="/nav/pulse" className="flex items-center justify-center rounded-md h-7 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pulse</a>
+          <a href="/nav/orbit" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
+          <a href="/nav/pulse" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pulse</a>
           </div>
         </TopNavigation>
         <div className="flex items-center gap-2">
@@ -570,7 +579,7 @@ function PhotoEditor() {
 
     <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
-       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] p-5 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
+       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           {/*<div className="mb-6 flex items-center justify-between">
             <div>
               <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">|| Adjustments ||</p>
@@ -578,79 +587,19 @@ function PhotoEditor() {
             <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
           </div>*/}
 
-  <div onClick={(event) => event.stopPropagation()}> 
-    <button type="button"onClick={() => setShowAdjustments((value) => !value)}
-          className="mb-3 flex w-full items-center justify-between rounded-lg border border-[#30363d] bg-[#20252b] px-3 py-2.5 text-left">
-          <span className=" item-center  text-[14px] font-bold text-[#eee7db]">
-          Adjustments
-          </span>
+  
 
-          <span className="text-[12px] text-[#8a8f8f]">
-          {showAdjustments ? '−' : '+'}
-          </span>
-     </button>
-
-       {showAdjustments && (
-      <div className="space-y-0">
-      <AdjustmentRow
-      label="Brightness"
-      value={controls.brightness}
-      min={-100}
-      max={100}
-      onChange={(value) => updateControl('brightness', value)}
-      icon={<Sun size={13} />}
-      disabled={!hasImage}
-      testId="brightness"
-      onReset={() => updateControl('brightness', 0)}/>
-
-    <AdjustmentRow
-      label="Contrast"
-      value={controls.contrast}
-      min={-100}
-      max={100}
-      onChange={(value) => updateControl('contrast', value)}
-      icon={<Contrast size={13} />}
-      disabled={!hasImage}
-      testId="contrast"
-      onReset={() => updateControl('contrast', 0)}/>
-
-    <AdjustmentRow
-      label="Saturation"
-      value={controls.saturation}
-      min={-100}
-      max={100}
-      onChange={(value) => updateControl('saturation', value)}
-      icon={<Droplets size={13} />}
-      disabled={!hasImage}
-      testId="saturation"
-      onReset={() => updateControl('saturation', 0)}/>
-
-    <AdjustmentRow
-      label="Blur"
-      value={controls.blur}
-      min={0}
-      max={20}
-      onChange={(value) => updateControl('blur', value)}
-      icon={<Focus size={13} />}
-      suffix="px"
-      disabled={!hasImage}
-      testId="blur"
-      onReset={() => updateControl('blur', 0)}/>
-      </div>
-    )}
-    </div>
-
-          <div className="mt-7 border-t border-[#2a3036] pt-5">
-            <p className="mb-3 font-mono text-[11px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
+          <div className="h-1">
+            <p className="mb-0  font-mono text-[11px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
             <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => { setCropMode((mode) => !mode); if (!cropRect) setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }} disabled={!hasImage} className={`control-button flex flex-col items-center gap-1.5 rounded-lg border py-2.5 text-[10px] font-semibold ${cropMode ? 'border-[#f3ad61] bg-[#342b23] text-[#f3b572]' : 'border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]'} disabled:cursor-not-allowed disabled:opacity-40`} data-testid="button-toggle-crop">
-                <Crop size={16} /> Crop
+              <button type="button" onClick={() => { setCropMode((mode) => !mode); if (!cropRect) setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }} disabled={!hasImage} className={`control-button flex justify-center flex items-center gap-1.5 rounded-lg border py-1 text-[3px] font-semibold ${cropMode ? 'border-[#f3ad61] bg-[#342b23] text-[#f3b572]' : 'border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]'} disabled:cursor-not-allowed disabled:opacity-40`} data-testid="button-toggle-crop">
+                <Crop size={14} /> Crop
               </button>
-              <button type="button" onClick={() => rotate('left')} disabled={!hasImage} className="control-button flex flex-col items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-2.5 text-[10px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-left">
-                <RotateCcw size={16} /> Left
+              <button type="button" onClick={() => rotate('left')} disabled={!hasImage} className="control-button flex justify-center flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-1 text-[3px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-left">
+                <RotateCcw size={14} /> Left
               </button>
-              <button type="button" onClick={() => rotate('right')} disabled={!hasImage} className="control-button flex flex-col items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-2.5 text-[10px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-right">
-                <RotateCw size={16} /> Right
+              <button type="button" onClick={() => rotate('right')} disabled={!hasImage} className="control-button flex justify-center flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-1 text-[3px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-right">
+                <RotateCw size={14} /> Right
               </button>
             </div>
           </div>
@@ -665,7 +614,7 @@ function PhotoEditor() {
             </div>
           )}
 
-          <div className="mt-6 rounded-xl border border-[#30363d] bg-[#1c2127] p-3.5">
+          {/*<div className="mt-6 rounded-xl border border-[#30363d] bg-[#1c2127] p-3.5">
             <div className="flex items-start gap-2.5">
               <MousePointer2 size={14} className="mt-0.5 shrink-0 text-[#dd9f5c]" />
               <div>
@@ -673,11 +622,11 @@ function PhotoEditor() {
                 <p className="mt-1 text-[10px] leading-relaxed text-[#858b8d]">Every slider updates the Image as you move. Your original stays untouched.</p>
               </div>
             </div>
-          </div>
+          </div>*/}
         </aside>
 
-        <section className="studio-grid mobile-preview order-1 flex min-h-fit flex-col bg-[#294169] lg:order-2">
-          <div className="flex items-center justify-between border-b border-[#4271ff] px-4 py-3 sm:px-6">
+        <section className=" studio-grid mobile-preview order-1 flex min-h-fit flex-col bg-[#294169] lg:order-2">
+          <div className="flex items-center justify-between border-b border-[#4271ff] px-4 py-0.5 sm:px-6">
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#1c8d15]'}`} />
               <span className="font-mono text-[10px] uppercase tracking-[.16em] text-[#989d9b]">{hasImage ? 'Live preview' : 'Ready when you are'}</span>
@@ -698,7 +647,7 @@ function PhotoEditor() {
                           setAppliedCrop(null);
                           setExportMessage('');
                           }}
-                          className="rounded-md px-2 py-1 text-[10px] font-bold hoverf:text-[#ffffff] bg-[#dc2626]">
+                          className="rounded-md px-2 py-0 mr-5 text-[10px] font-bold hoverf:text-[#ffffff] bg-[#dc2626]">
                          Remove
                       </button>
 
@@ -719,13 +668,13 @@ function PhotoEditor() {
             )}
           </div>
           <div
-            className={`relative flex flex-1 items-center justify-center p-5 sm:p-8 ${isDraggingFile ? 'bg-[#26231f]' : ''}`}
+            className={`relative flex flex-1 items-center justify-center p-3.5 sm:p-8 ${isDraggingFile ? 'bg-[#26231f]' : ''}`}
             onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }}
             onDragLeave={() => setIsDraggingFile(false)}
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[400px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#15181d] px-7 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[400px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#15181d] px-7  text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
@@ -790,57 +739,9 @@ function PhotoEditor() {
         </section>
 
 {/*aside2*/}
-  <aside className={`order-3 border-t border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${ isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
- <div onClick={(event) => event.stopPropagation()}>
-    <button
-        type="button"
-        onClick={() => setIsLooksOpen((prev) => !prev)}
-        className="mb-2 flex w-full items-center justify-between text-left">
-      <div>
-        <p className="font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">
-         Looks
-        </p>
-        <p className="mt-2 inline-block rounded-lg border border-[#30363d] bg-[#DB2777] px-4 py-2 text-[13px] font-bold text-[#eee7db] shadow-sm">
-        Filters
-        </p>
-      </div>
-      
-
-       <Sparkles
-       size={16}
-       className={`text-[#dca05b] transition-transform duration-300 ${
-       isLooksOpen ? "rotate-180" : "" }`}/>
-    </button>
-       {isLooksOpen && (
-         
-         <div>
-           <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-             {filterOptions.map((option) => (
-              <button
-                key={option.name}
-                type="button"
-                onClick={() => updateControl('filter', option.name)}
-                disabled={!hasImage}
-                className={`filter-card w-[100px] shrink-0 rounded-lg border bg-[#20252b] p-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${controls.filter === option.name ? 'selected border-[#f3ad61] bg-[#2a2925]' : 'border-[#30363d]'}`}
-                data-testid={`button-filter-${option.name.toLowerCase()}`}>
-                <span className="block h-7 w-full rounded-md" style={{ background: option.swatch, filter: option.name === 'Noir' ? 'grayscale(1)' : option.name === 'Cool' ? 'hue-rotate(16deg)' : undefined }} />
-                <span className="mt-2 block truncate px-1 text-[10px] font-bold text-[#dcd8cf]">{option.name}</span>
-                <span className="mt-0.5 block truncate px-1 pb-1 text-[9px] text-[#7f8788]">{option.description}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-       )}
-       </div>
-          
-          <div className={`mt-4 border-t border-[#2a3036] pt-3 mb-0 ${!hasImage ? 'opacity-40' : ''}`}>
-            <div className="mb-1 flex items-center justify-between">
-              <label htmlFor="filter-intensity" className="text-[11px] font-semibold text-[#d4d0c9]">Filter intensity</label>
-              <span className="font-mono text-[10px] text-[#9fa3a1]">{controls.intensity}%</span>
-            </div>
-            <input id="filter-intensity" type="range" min={0} max={100} value={controls.intensity} disabled={!hasImage} onChange={(event) => updateControl('intensity', Number(event.target.value))} style={{ '--range-progress': `${controls.intensity}%` } as CSSProperties} className="range-warm h-4 w-full cursor-pointer appearance-none bg-transparent" data-testid="input-filter-intensity" />
-          </div>
-          <div className="mt-6 border-t border-[#2a3036] pt-5">
+  <aside className={`order-3 border-t max-h-[1dvh] border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${ isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
+   
+         {/* <div className="mt-6 border-t border-[#2a3036] pt-5">
             <p className="mb-3 font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Image details</p>
             {hasImage ? (
               <div className="space-y-3">
@@ -872,22 +773,181 @@ function PhotoEditor() {
           <div className="mt-5 rounded-xl border border-[#30363d] bg-[#1c2127] p-3.5">
             <div className="flex items-center gap-2 text-[10px] font-bold text-[#d7d0c3]"><Maximize2 size={13} className="text-[#dc9f5b]" /> Export at full size</div>
             <p className="mt-1.5 text-[10px] leading-relaxed text-[#858b8d]">Your PNG keeps the source canvas dimensions and all current adjustments.</p>
-          </div>
+          </div>*/}
   </aside>
-      </div>
+    </div>
 
-      <footer className=" fixed bottom-0 left-0 z-50 w-full  flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-3.5 sm:flex-row sm:items-center sm:px-7">
-        <div className="flex min-h-5 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
-          {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]" /> Edits are private by default</>}
+  <footer className=" fixed bottom-0 left-0 z-50 w-full  flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-2 sm:flex-row sm:items-center sm:px-7">
+        <div className="flex min-h-2 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
+        {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]"/> Edits are private by default</>}
         </div>
-        <div className="flex w-full items-center gap-2 sm:w-auto">
-          <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-2 rounded-lg border border-[#394047] bg-[#20252b] px-3.5 py-2.5 text-[11px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-reset-all">
-            <RotateCcw size={14} /> Reset
-          </button>
-          <button type="button" onClick={downloadImage} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#f1ae62] px-4 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.1)] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-download">
-            <Download size={20} /> Download Image <ArrowUpRight size={19} />
-          </button>
+
+     <div className="flex w-full items-center gap-2">
+      <div className="relative">
+      <button type="button" onClick={(event) => { event.stopPropagation();
+      setShowAdjustments((value) => !value);}}
+      className="flex w-20.5 items-center justify-between rounded-lg border border-[#30363d] bg-[#20252b] px-3 py-2.5 text-left">
+      <span className="text-[14px] font-bold text-[#eee7db]">
+      Adjust
+      </span>
+      <span className="text-[12px] text-[#8a8f8f]">
+      {showAdjustments ? '−' : '+'}
+      </span>
+      </button>
+
+      {showAdjustments && (
+      <div
+      onClick={(event) => event.stopPropagation()}
+      className="absolute bottom-full left-0 z-50 mb-0 w-[300px] rounded-xl   p-3 ">
+      
+      <AdjustmentRow
+        label="Brightness"
+        value={controls.brightness}
+        min={-100}
+        max={100}
+        onChange={(value) => updateControl('brightness', value)}
+        icon={<Sun size={13} />}
+        disabled={!hasImage}
+        testId="brightness"
+        onReset={() => updateControl('brightness', 0)}/>
+
+      <AdjustmentRow
+        label="Contrast"
+        value={controls.contrast}
+        min={-100}
+        max={100}
+        onChange={(value) => updateControl('contrast', value)}
+        icon={<Contrast size={13} />}
+        disabled={!hasImage}
+        testId="contrast"
+        onReset={() => updateControl('contrast', 0)}/>
+
+      <AdjustmentRow
+        label="Saturation"
+        value={controls.saturation}
+        min={-100}
+        max={100}
+        onChange={(value) => updateControl('saturation', value)}
+        icon={<Droplets size={13} />}
+        disabled={!hasImage}
+        testId="saturation"
+        onReset={() => updateControl('saturation', 0)}/>
+
+      <AdjustmentRow
+        label="Blur"
+        value={controls.blur}
+        min={0}
+        max={20}
+        onChange={(value) => updateControl('blur', value)}
+        icon={<Focus size={13} />}
+        suffix="px"
+        disabled={!hasImage}
+        testId="blur"
+        onReset={() => updateControl('blur', 0)}/>
+     </div>
+     )}
+    </div>
+                       {/*Filter start here*/}
+    <div
+        onClick={(event) => event.stopPropagation()}
+          className="relative w-20 min-w-0">
+           {/* Filters Button */}
+        <button type="button"onClick={() => setIsLooksOpen((prev) => !prev)}
+          className="flex w-20 items-center justify-between text-left">
+          <p className="inline-block rounded-lg border border-[#30363d] bg-[#DB2777] px-4 py-2 text-[13px] font-bold text-[#eee7db] shadow-sm">
+          Filters
+          </p>
+       </button>
+
+       {/* Filter Popup - Opens ABOVE Button */}
+       {isLooksOpen && (
+     <div className="absolute bottom-full left-[-103px] z-[100] mb-1.5 w-[min(99vw,520px)]">
+
+      {/* Filter Row */}
+       <div className="w-full rounded-lg bg-[#0c1d39]/95 p-1.5">
+        <div className="flex w-full min-w-0 gap-2 overflow-x-auto pb-2 scrollbar-hide">
+          {filterOptions.map((option) => (
+            <button
+              key={option.name}
+              type="button"
+              onClick={() => updateControl('filter', option.name)}
+              disabled={!hasImage}
+              className={`filter-card w-[74px] shrink-0 rounded-lg border bg-[#20252b] p-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${
+                controls.filter === option.name
+                  ? 'selected border-[#f3ad61] bg-[#2a2925]'
+                  : 'border-[#30363d]'
+              }`}
+              data-testid={`button-filter-${option.name.toLowerCase()}`}>
+              {/* Filter Colour Box */}
+              <div
+                className="relative flex h-15 w-15 flex-col items-center justify-center overflow-hidden rounded-md text-center"
+                style={{
+                  background: option.swatch,
+                  filter:
+                    option.name === 'Noir'
+                      ? 'grayscale(1)'
+                      : option.name === 'Cool'
+                        ? 'hue-rotate(16deg)'
+                        : undefined,
+                      }}>
+                <span className="text-[10px] font-bold text-white">
+                  {option.name}
+                </span>
+
+                <span className="mt-0.5 text-[8px] leading-tight text-white/80">
+                  {option.description}
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
+
+        {/* Filter Intensity */}
+        {/*<div
+          className={`mt-1 border-t border-[#2a3036] pt-2 ${
+            !hasImage ? 'opacity-40' : ''}`}>
+            <div className="mb-1 flex items-center justify-between">
+            <label
+              htmlFor="filter-intensity"
+              className="text-[11px] font-semibold text-[#d4d0c9]">
+              Filter intensity
+            </label>
+
+            <span className="font-mono text-[10px] text-[#9fa3a1]">
+              {controls.intensity}%
+            </span>
+         </div>
+
+          <input
+            id="filter-intensity"
+            type="range"
+            min={0}
+            max={100}
+            value={controls.intensity}
+            disabled={!hasImage}
+            onChange={(event) =>
+              updateControl('intensity', Number(event.target.value))
+            }
+            style={
+              {
+                '--range-progress': `${controls.intensity}%`,
+              } as CSSProperties
+            }
+            className="range-warm h-4 w-full cursor-pointer appearance-none bg-transparent"
+            data-testid="input-filter-intensity"/>
+        </div>*/}
+      </div>
+    </div>
+  )}
+</div>
+      <span className="ml-20">
+      <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#394047] bg-[#20252b] px-3.5 py-2.5 text-[11px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-reset-all">
+      <RotateCcw size={14} /> Reset
+      </button>
+      </span>
+</div>
+
+      
       </footer>
     </main>
   );
