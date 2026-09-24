@@ -579,7 +579,7 @@ function PhotoEditor() {
 
     <div className="mx-auto grid min-h-[calc(90dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
-       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] mb-10 pb-17 p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
+       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] mb-5 pb-14 p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           {/*<div className="mb-6 flex items-center justify-between">
             <div>
               <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">|| Adjustments ||</p>
