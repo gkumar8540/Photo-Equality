@@ -577,9 +577,9 @@ function PhotoEditor() {
         </div>
       </header>
 
-    <div className="mx-auto grid min-h-[calc(100dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
+    <div className="mx-auto grid min-h-[calc(90dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
-       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
+       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] mb-10 pb-17 p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           {/*<div className="mb-6 flex items-center justify-between">
             <div>
               <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">|| Adjustments ||</p>
@@ -739,7 +739,7 @@ function PhotoEditor() {
         </section>
 
 {/*aside2*/}
-  <aside className={`order-3 border-t max-h-[1dvh] border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${ isLooksOpen ? "p-5 lg:p-6" : "p-3 lg:p-4"}`}>
+  <aside className={`order-3 border-t max-h-[0dvh] border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${ isLooksOpen ? "p-5 lg:p-6" : "p-0.5 lg:p-4"}`}>
    
          {/* <div className="mt-6 border-t border-[#2a3036] pt-5">
             <p className="mb-3 font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Image details</p>
