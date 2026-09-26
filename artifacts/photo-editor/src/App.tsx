@@ -98,7 +98,7 @@ function EmptyArtwork() {
         <path d="M151 177h116M209 119v116" stroke="#9ca4a7" strokeOpacity=".35" strokeWidth="1" />
         <path d="M692 377h92M738 331v92" stroke="#f6c48d" strokeOpacity=".3" strokeWidth="1" />
       </svg>
-      <div className="absolute bottom-9 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap font-mono text-[10px] uppercase tracking-[.2em] text-[#aeb2b0]/40">
+      <div className="absolute bottom-9 left-1/2 flex -translate-x-1/2 items-center gap-2 whitespace-nowrap font-mono text-[10px] uppercase tracking-[.2em] text-[#aeb2b0]/80">
         <span className="h-1.5 w-1.5 rounded-full bg-[#e8a45d]" />
         Prince Kumar workspace
       </div>
@@ -674,14 +674,14 @@ function PhotoEditor() {
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[400px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#2d343b] bg-[#15181d] px-7  text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[400px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#db2777] bg-[#ffffff] px-7  text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
                     <ImagePlus size={27} strokeWidth={1.5} />
                   </div>
-                  <h2 className="text-xl font-extrabold tracking-[-.035em] text-[#f1ece3] sm:text-2xl">Bring a frame to life.</h2>
-                  <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#929897]">Drop an image here, or open one from your device. It stays right here, always.</p>
+                  <h3 className="text-x pt-2 font-extrabold tracking-[-.035em] text-[#6b7280] sm:text-2xl">Edit Enhance Create.</h3>
+                  <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#6b7280]">Your images Your edits Your control.</p>
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#443528] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#3a3025]" data-testid="button-choose-image">
                     <UploadCloud size={15}/> Choose image
                   </button>
