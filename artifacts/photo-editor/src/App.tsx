@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
 import { Capacitor } from '@capacitor/core';
-import logo from '../../images/logoe.jpeg';
+import logo from '../../images/logoe3.jpeg';
 import { TopNavigation } from './components/navigation/TopNavigation';
 import BottomNavigationPage from './pages/bottom-navigation';
 import BreadcrumbNavigationPage from './pages/breadcrumb-navigation';
 import MobileNavigationPage from './pages/mobile-navigation';
 import OrbitNavigationPage from './pages/orbit-navigation';
 import PulseNavigationPage from './pages/pulse-navigation';
-import SidebarNavigationPage from './pages/sidebar-navigation';
+import OldFuturePage from './pages/OldFuture';
 import TopNavigationPage from './pages/top-navigation';
 import {
   ArrowUpRight,
@@ -544,7 +544,7 @@ function PhotoEditor() {
 
             <div className="ml-auto flex items-center">
               <button type="button"onClick={downloadImage}disabled={!hasImage}
-               className="control-button flex items-center justify-center rounded-md bg-[#f1ae62] ml-8.5 px-2 py-1.5 text-[9px] gap-0.5 font-bold text-[#24272a] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-10"
+               className="control-button flex items-center justify-center rounded-md bg-[#f1ae62] ml-8.5 px-2 py-1.5 text-[9px] gap-0.5 font-bold text-[#24272a] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-40"
                data-testid="button-download">
                <Download size={14} />Save{/*<ArrowUpRight size={19}/>*/}
               </button>
@@ -577,7 +577,7 @@ function PhotoEditor() {
         </div>
       </header>
 
-    <div className="mx-auto grid min-h-[calc(90dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
+    <div className="mx-auto grid min-h-[calc(88dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
 {/*aside1*/}
        <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] mb-5 pb-14 p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
           {/*<div className="mb-6 flex items-center justify-between">
@@ -964,7 +964,7 @@ function App() {
         <Route path="/" component={PhotoEditor} />
         <Route path="/nav/mixer" component={TopNavigationPage} />
         <Route path="/nav/top" component={TopNavigationPage} />
-        <Route path="/nav/sidebar" component={SidebarNavigationPage} />
+        <Route path="/nav/sidebar" component={OldFuturePage} />
         <Route path="/nav/mobile" component={MobileNavigationPage} />
         <Route path="/nav/breadcrumb" component={BreadcrumbNavigationPage} />
         <Route path="/nav/bottom" component={BottomNavigationPage} />

@@ -31,6 +31,13 @@ type TextLayer = {
   y: number;
   fontSize: number;
   color: string;
+
+  colorRanges?: {
+  start: number;
+  end: number;
+  color: string;
+}[];
+
   highlightedWords: HighlightRange[];
   bold: boolean;
   italic: boolean;
@@ -2569,7 +2576,7 @@ const handleTextPointerUp = (
                 touchAction:
                   'none',
               }}
-            >
+              >
               <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
                 <div className="border-r border-b border-white/30" />
                 <div className="border-r border-b border-white/30" />
@@ -2823,337 +2830,149 @@ const handleTextPointerUp = (
                   </button>
                 </div>
               )}
-
-  {textLayers.map((layer) => (
+ 
+                                       {/* T-all */}
+ {textLayers.map((layer) => (
   <div
     key={layer.id}
     onPointerDown={(event) => {
-      const el = event.currentTarget as HTMLDivElement & {
-        __textPointers?: Map<
-          number,
-          { x: number; y: number }
-        >;
-        __moveStartX?: number;
-        __moveStartY?: number;
-        __moveStartLayerX?: number;
-        __moveStartLayerY?: number;
-        __pinchStartDistance?: number;
-        __pinchStartFontSize?: number;
-        __isPinching?: boolean;
-      };
+      const el =
+        event.currentTarget as HTMLDivElement & {
+          __startX?: number;
+          __startY?: number;
+          __startLayerX?: number;
+          __startLayerY?: number;
+        };
 
       event.preventDefault();
       event.stopPropagation();
 
       setSelectedTextId(layer.id);
 
-      if (!el.__textPointers) {
-        el.__textPointers = new Map();
-      }
+      el.__startX = event.clientX;
+      el.__startY = event.clientY;
 
-      el.__textPointers.set(event.pointerId, {
-        x: event.clientX,
-        y: event.clientY,
-      });
+      el.__startLayerX = layer.x;
+      el.__startLayerY = layer.y;
 
       try {
         el.setPointerCapture(event.pointerId);
       } catch {}
-
-      /*
-       * =========================
-       * 1 FINGER = MOVE
-       * =========================
-       */
-      if (el.__textPointers.size === 1) {
-        el.__isPinching = false;
-
-        el.__moveStartX = event.clientX;
-        el.__moveStartY = event.clientY;
-
-        el.__moveStartLayerX = layer.x;
-        el.__moveStartLayerY = layer.y;
-
-        return;
-      }
-
-      /*
-       * =========================
-       * 2 FINGERS = ZOOM
-       * =========================
-       */
-      if (el.__textPointers.size === 2) {
-        const points = Array.from(
-          el.__textPointers.values()
-        );
-
-        const [a, b] = points;
-
-        const distance = Math.hypot(
-          b.x - a.x,
-          b.y - a.y
-        );
-
-        el.__pinchStartDistance = distance;
-        el.__pinchStartFontSize = layer.fontSize;
-
-        el.__isPinching = true;
-      }
     }}
 
     onPointerMove={(event) => {
-      const el = event.currentTarget as HTMLDivElement & {
-        __textPointers?: Map<
-          number,
-          { x: number; y: number }
-        >;
-        __moveStartX?: number;
-        __moveStartY?: number;
-        __moveStartLayerX?: number;
-        __moveStartLayerY?: number;
-        __pinchStartDistance?: number;
-        __pinchStartFontSize?: number;
-        __isPinching?: boolean;
-      };
+      const el =
+        event.currentTarget as HTMLDivElement & {
+          __startX?: number;
+          __startY?: number;
+          __startLayerX?: number;
+          __startLayerY?: number;
+        };
 
-      if (!el.__textPointers) return;
-
-      /*
-       * Update current finger position
-       */
-      el.__textPointers.set(event.pointerId, {
-        x: event.clientX,
-        y: event.clientY,
-      });
-
-      /*
-       * =========================
-       * 2 FINGERS = ZOOM ONLY
-       * =========================
-       */
       if (
-        el.__textPointers.size >= 2 &&
-        el.__isPinching
+        el.__startX === undefined ||
+        el.__startY === undefined ||
+        el.__startLayerX === undefined ||
+        el.__startLayerY === undefined
       ) {
-        const points = Array.from(
-          el.__textPointers.values()
-        );
-
-        const [a, b] = points;
-
-        const currentDistance = Math.hypot(
-          b.x - a.x,
-          b.y - a.y
-        );
-
-        const startDistance =
-          el.__pinchStartDistance ?? 0;
-
-        const startFontSize =
-          el.__pinchStartFontSize ??
-          layer.fontSize;
-
-        if (startDistance > 0) {
-          const scale =
-            currentDistance /
-            startDistance;
-
-          const newFontSize = Math.min(
-            160,
-            Math.max(
-              12,
-              startFontSize * scale
-            )
-          );
-
-          updateSelectedText({
-            fontSize:
-              Math.round(newFontSize),
-          });
-        }
-
-        /*
-         * VERY IMPORTANT:
-         * Zoom ke waqt MOVE bilkul nahi
-         */
         return;
       }
 
-      /*
-       * =========================
-       * 1 FINGER = MOVE ONLY
-       * =========================
-       */
+      const parent = el.parentElement;
+
+      if (!parent) return;
+
+      const rect =
+        parent.getBoundingClientRect();
+
       if (
-        el.__textPointers.size === 1 &&
-        !el.__isPinching
+        rect.width <= 0 ||
+        rect.height <= 0
       ) {
-        const parent =
-          el.parentElement;
-
-        if (!parent) return;
-
-        const rect =
-          parent.getBoundingClientRect();
-
-        if (
-          rect.width <= 0 ||
-          rect.height <= 0
-        ) {
-          return;
-        }
-
-        if (
-          el.__moveStartX === undefined ||
-          el.__moveStartY === undefined ||
-          el.__moveStartLayerX === undefined ||
-          el.__moveStartLayerY === undefined
-        ) {
-          return;
-        }
-
-        const deltaX =
-          event.clientX -
-          el.__moveStartX;
-
-        const deltaY =
-          event.clientY -
-          el.__moveStartY;
-
-        const deltaXPercent =
-          (deltaX / rect.width) * 100;
-
-        const deltaYPercent =
-          (deltaY / rect.height) * 100;
-
-        const newX = Math.max(
-          0,
-          Math.min(
-            100,
-            el.__moveStartLayerX +
-              deltaXPercent
-          )
-        );
-
-        const newY = Math.max(
-          0,
-          Math.min(
-            100,
-            el.__moveStartLayerY +
-              deltaYPercent
-          )
-        );
-
-        updateSelectedText({
-          x: newX,
-          y: newY,
-        });
+        return;
       }
+
+      const dx =
+        event.clientX - el.__startX;
+
+      const dy =
+        event.clientY - el.__startY;
+
+      const dxPercent =
+        (dx / rect.width) * 100;
+
+      const dyPercent =
+        (dy / rect.height) * 100;
+
+      const newX = Math.max(
+        0,
+        Math.min(
+          100,
+          el.__startLayerX + dxPercent
+        )
+      );
+
+      const newY = Math.max(
+        0,
+        Math.min(
+          100,
+          el.__startLayerY + dyPercent
+        )
+      );
+
+      updateSelectedText({
+        x: newX,
+        y: newY,
+      });
     }}
 
     onPointerUp={(event) => {
-      const el = event.currentTarget as HTMLDivElement & {
-        __textPointers?: Map<
-          number,
-          { x: number; y: number }
-        >;
-        __isPinching?: boolean;
-        __moveStartX?: number;
-        __moveStartY?: number;
-        __moveStartLayerX?: number;
-        __moveStartLayerY?: number;
-      };
-
-      if (!el.__textPointers) return;
-
-      el.__textPointers.delete(
-        event.pointerId
-      );
+      const el =
+        event.currentTarget as HTMLDivElement & {
+          __startX?: number;
+          __startY?: number;
+          __startLayerX?: number;
+          __startLayerY?: number;
+        };
 
       try {
-        el.releasePointerCapture(
-          event.pointerId
-        );
+        el.releasePointerCapture(event.pointerId);
       } catch {}
 
-      /*
-       * Agar ab sirf 1 finger bachi hai,
-       * to MOVE ko fresh position se restart karo.
-       */
-      if (
-        el.__textPointers.size === 1
-      ) {
-        const remaining =
-          Array.from(
-            el.__textPointers.values()
-          )[0];
-
-        el.__isPinching = false;
-
-        el.__moveStartX =
-          remaining.x;
-
-        el.__moveStartY =
-          remaining.y;
-
-        /*
-         * Current layer position ko
-         * fresh starting point banao.
-         */
-        el.__moveStartLayerX =
-          layer.x;
-
-        el.__moveStartLayerY =
-          layer.y;
-
-        return;
-      }
-
-      /*
-       * No fingers
-       */
-      if (
-        el.__textPointers.size === 0
-      ) {
-        el.__isPinching = false;
-      }
+      el.__startX = undefined;
+      el.__startY = undefined;
+      el.__startLayerX = undefined;
+      el.__startLayerY = undefined;
     }}
 
     onPointerCancel={(event) => {
-      const el = event.currentTarget as HTMLDivElement & {
-        __textPointers?: Map<
-          number,
-          { x: number; y: number }
-        >;
-        __isPinching?: boolean;
-      };
-
-      el.__textPointers?.delete(
-        event.pointerId
-      );
-
-      el.__isPinching = false;
+      const el =
+        event.currentTarget as HTMLDivElement & {
+          __startX?: number;
+          __startY?: number;
+          __startLayerX?: number;
+          __startLayerY?: number;
+        };
 
       try {
-        el.releasePointerCapture(
-          event.pointerId
-        );
+        el.releasePointerCapture(event.pointerId);
       } catch {}
+
+      el.__startX = undefined;
+      el.__startY = undefined;
+      el.__startLayerX = undefined;
+      el.__startLayerY = undefined;
     }}
 
     onDoubleClick={() => {
       setSelectedTextId(layer.id);
 
-      setNewText(
-        layer.text
-      );
+      setNewText(layer.text);
 
-      setActiveTool(
-        'text'
-      );
+      setActiveTool('text');
     }}
 
-    className={`absolute max-w-[90%] cursor-move select-none whitespace-pre-wrap break-words px-2 py-1 text-center ${
+    className={`absolute max-w-[90%] cursor-move select-none whitespace-pre-wrap break-words px-2 py-1 ${
       selectedTextId === layer.id
         ? 'ring-2 ring-[#f3ad61] ring-offset-2 ring-offset-transparent'
         : ''
@@ -3162,11 +2981,9 @@ const handleTextPointerUp = (
     style={{
       left: `${layer.x}%`,
       top: `${layer.y}%`,
+
       transform:
         'translate(-50%, -50%)',
-
-      color:
-        layer.color,
 
       fontFamily:
         layer.fontFamily,
@@ -3206,8 +3023,109 @@ const handleTextPointerUp = (
         'none',
     }}
   >
-    {layer.text}
+    {/*
+     * ============================
+     * COLORED TEXT RENDERING
+     * ============================
+     */}
 
+    {(() => {
+      const ranges =
+        [...(layer.colorRanges ?? [])]
+          .filter(
+            (range) =>
+              range.start >= 0 &&
+              range.end > range.start &&
+              range.start < layer.text.length
+          )
+          .sort(
+            (a, b) =>
+              a.start - b.start
+          );
+
+      if (!ranges.length) {
+        return (
+          <span
+            style={{
+              color: layer.color,
+            }}
+          >
+            {layer.text}
+          </span>
+        );
+      }
+
+      const parts: React.ReactNode[] = [];
+
+      let position = 0;
+
+      ranges.forEach(
+        (range, index) => {
+          /*
+           * Normal text before colored range
+           */
+          if (range.start > position) {
+            parts.push(
+              <span
+                key={`normal-${index}`}
+                style={{
+                  color: layer.color,
+                }}
+              >
+                {layer.text.slice(
+                  position,
+                  range.start
+                )}
+              </span>
+            );
+          }
+
+          /*
+           * Colored text
+           */
+          const safeEnd = Math.min(
+            range.end,
+            layer.text.length
+          );
+
+          parts.push(
+            <span
+              key={`color-${index}`}
+              style={{
+                color: range.color,
+              }}
+            >
+              {layer.text.slice(
+                range.start,
+                safeEnd
+              )}
+            </span>
+          );
+
+          position = safeEnd;
+        }
+      );
+
+      /*
+       * Remaining normal text
+       */
+      if (position < layer.text.length) {
+        parts.push(
+          <span
+            key="normal-last"
+            style={{
+              color: layer.color,
+            }}
+          >
+            {layer.text.slice(position)}
+          </span>
+        );
+      }
+
+      return parts;
+    })()}
+
+    {/* DELETE BUTTON */}
     {selectedTextId === layer.id && (
       <button
         type="button"
@@ -3228,6 +3146,7 @@ const handleTextPointerUp = (
     )}
   </div>
 ))}
+                          {/*T-all*/}
             </div>
           </div>
 
@@ -3425,17 +3344,17 @@ const handleTextPointerUp = (
 {activeTool === 'text' && (
   <section
     data-photo-editor-panel
-    className={`${overlayPanelClass} max-h-[58vh] p-2 sm:max-h-[70vh] sm:p-3`}
+    className={`${overlayPanelClass} w-[min(94vw,620px)] max-h-[52vh] overflow-y-auto p-2`}
   >
     {/* HEADER */}
-    <div className="mb-2 flex items-center justify-between gap-2">
-      <div className="min-w-0">
-        <h2 className="text-xs font-bold sm:text-sm">
+    <div className="mb-2 flex items-center justify-between">
+      <div>
+        <h2 className="text-xs font-bold">
           {selectedText ? 'Edit Text' : 'Add Text'}
         </h2>
 
-        <p className="truncate text-[9px] text-white/40">
-          Select words in the text box to color only those words
+        <p className="text-[9px] text-white/40">
+          Select any word or sentence to change its color
         </p>
       </div>
 
@@ -3443,30 +3362,40 @@ const handleTextPointerUp = (
         <button
           type="button"
           onClick={deleteSelectedText}
-          className="shrink-0 rounded-md bg-red-500/10 px-2 py-1 text-[10px] font-bold text-red-300"
+          className="rounded-md bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-300"
         >
           Delete
         </button>
       )}
     </div>
 
-    {/* TEXT INPUT */}
+    {/* TEXT */}
     <textarea
       ref={textareaRef}
       value={selectedTextValue}
-      onChange={(event) =>
-        updateTextValue(event.target.value)
-      }
-      onSelect={handleTextareaSelect}
+      onChange={(e) => updateTextValue(e.target.value)}
+      onSelect={(e) => {
+        const start = e.currentTarget.selectionStart;
+        const end = e.currentTarget.selectionEnd;
+
+        if (start !== end) {
+          setSelectedWordRange({
+          layerId: selectedText?.id ?? 0,
+          start,
+          end,
+         });
+        } else {
+          setSelectedWordRange(null);
+        }
+      }}
       rows={2}
-      placeholder="Type your text here..."
-      inputMode="text"
-      enterKeyHint="done"
-      className="w-full resize-none rounded-lg border border-white/10 bg-[#161a1f] p-2 text-xs text-white outline-none placeholder:text-white/30 focus:border-[#f3ad61]"
+      placeholder="Type your text..."
+      className="w-full resize-none rounded-lg border border-white/10 bg-[#161a1f] px-2 py-1.5 text-xs text-white outline-none focus:border-[#f3ad61]"
     />
 
-    {/* BOLD / ITALIC / UNDERLINE / ALIGNMENT */}
-    <div className="mt-2 flex gap-1.5 overflow-x-auto whitespace-nowrap scrollbar-hide">
+    {/* BASIC FORMAT */}
+    <div className="mt-2 flex gap-1 overflow-x-auto scrollbar-hide">
+
       {/* BOLD */}
       <button
         type="button"
@@ -3483,10 +3412,8 @@ const handleTextPointerUp = (
 
           setTextBold(value);
         }}
-        className={`${panelButtonClass} h-8 min-w-8 shrink-0 px-2 text-xs ${
-          (selectedText
-            ? selectedText.bold
-            : textBold)
+        className={`${panelButtonClass} h-7 min-w-8 px-2 text-xs ${
+          (selectedText ? selectedText.bold : textBold)
             ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
             : ''
         }`}
@@ -3510,10 +3437,8 @@ const handleTextPointerUp = (
 
           setTextItalic(value);
         }}
-        className={`${panelButtonClass} h-8 min-w-8 shrink-0 px-2 text-xs ${
-          (selectedText
-            ? selectedText.italic
-            : textItalic)
+        className={`${panelButtonClass} h-7 min-w-8 px-2 text-xs ${
+          (selectedText ? selectedText.italic : textItalic)
             ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
             : ''
         }`}
@@ -3537,10 +3462,8 @@ const handleTextPointerUp = (
 
           setTextUnderline(value);
         }}
-        className={`${panelButtonClass} h-8 min-w-8 shrink-0 px-2 text-xs ${
-          (selectedText
-            ? selectedText.underline
-            : textUnderline)
+        className={`${panelButtonClass} h-7 min-w-8 px-2 text-xs ${
+          (selectedText ? selectedText.underline : textUnderline)
             ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
             : ''
         }`}
@@ -3548,44 +3471,38 @@ const handleTextPointerUp = (
         U
       </button>
 
-      {/* ALIGNMENT */}
-      {(['left', 'center', 'right'] as const).map(
-        (align) => (
-          <button
-            key={align}
-            type="button"
-            onClick={() => {
-              if (selectedText) {
-                updateSelectedText({
-                  align,
-                });
-              }
+      {/* ALIGN */}
+      {(['left', 'center', 'right'] as const).map((align) => (
+        <button
+          key={align}
+          type="button"
+          onClick={() => {
+            if (selectedText) {
+              updateSelectedText({ align });
+            }
 
-              setTextAlign(align);
-            }}
-            className={`${panelButtonClass} h-8 min-w-8 shrink-0 px-2 text-xs ${
-              (selectedText
-                ? selectedText.align
-                : textAlign) === align
-                ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
-                : ''
-            }`}
-          >
-            {align === 'left'
-              ? 'L'
-              : align === 'center'
-              ? 'C'
-              : 'R'}
-          </button>
-        )
-      )}
+            setTextAlign(align);
+          }}
+          className={`${panelButtonClass} h-7 min-w-8 px-2 text-xs ${
+            (selectedText ? selectedText.align : textAlign) === align
+              ? 'border-[#f3ad61] bg-[#f3ad61] text-black'
+              : ''
+          }`}
+        >
+          {align === 'left'
+            ? 'L'
+            : align === 'center'
+            ? 'C'
+            : 'R'}
+        </button>
+      ))}
     </div>
 
-    {/* FONT + FULL TEXT COLOR */}
-    <div className="mt-2 flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-      {/* FONT */}
-      <div className="min-w-[145px] shrink-0">
-        <label className="mb-1 block text-[9px] font-semibold text-white/50">
+    {/* FONT + FULL COLOR */}
+    <div className="mt-2 grid grid-cols-2 gap-2">
+
+      <div>
+        <label className="mb-1 block text-[9px] text-white/50">
           Font
         </label>
 
@@ -3595,8 +3512,8 @@ const handleTextPointerUp = (
               ? selectedText.fontFamily
               : fontFamily
           }
-          onChange={(event) => {
-            const value = event.target.value;
+          onChange={(e) => {
+            const value = e.target.value;
 
             if (selectedText) {
               updateSelectedText({
@@ -3606,7 +3523,7 @@ const handleTextPointerUp = (
 
             setFontFamily(value);
           }}
-          className="h-8 w-full rounded-lg border border-white/10 bg-[#2b3238] px-2 text-[10px] font-semibold text-white outline-none"
+          className="h-8 w-full rounded-lg border border-white/10 bg-[#2b3238] px-2 text-[10px] text-white outline-none"
         >
           {FONT_OPTIONS.map((font) => (
             <option key={font} value={font}>
@@ -3616,10 +3533,9 @@ const handleTextPointerUp = (
         </select>
       </div>
 
-      {/* FULL TEXT COLOR */}
-      <div className="min-w-[145px] shrink-0">
-        <label className="mb-1 block text-[9px] font-semibold text-white/50">
-          Text Color
+      <div>
+        <label className="mb-1 block text-[9px] text-white/50">
+          Full Text Color
         </label>
 
         <div className="flex h-8 items-center gap-2 rounded-lg border border-white/10 bg-[#2b3238] px-2">
@@ -3630,8 +3546,8 @@ const handleTextPointerUp = (
                 ? selectedText.color
                 : textColor
             }
-            onChange={(event) => {
-              const value = event.target.value;
+            onChange={(e) => {
+              const value = e.target.value;
 
               if (selectedText) {
                 updateSelectedText({
@@ -3644,122 +3560,81 @@ const handleTextPointerUp = (
             className="h-6 w-8 cursor-pointer border-0 bg-transparent"
           />
 
-          <span className="text-[10px]">
-            Full Text
+          <span className="text-[9px] text-white/70">
+            All
           </span>
         </div>
       </div>
     </div>
 
-    {/* SIZE + OPACITY */}
-    <div className="mt-2 flex gap-3 overflow-x-auto whitespace-nowrap scrollbar-hide">
-      {/* SIZE */}
-      <div className="min-w-[175px] shrink-0">
-        <div className="mb-1 flex items-center justify-between">
-          <label className="text-[9px] font-semibold text-white/50">
-            Text Size
-          </label>
+  
 
-          <span className="text-[9px] text-white/50">
-            {selectedText
-              ? selectedText.fontSize
-              : textSize}
-            px
-          </span>
-        </div>
-
-        <input
-          type="range"
-          min="12"
-          max="160"
-          value={
-            selectedText
-              ? selectedText.fontSize
-              : textSize
-          }
-          onChange={(event) => {
-            const value =
-              Number(event.target.value);
-
-            if (selectedText) {
-              updateSelectedText({
-                fontSize: value,
-              });
-            }
-
-            setTextSize(value);
-          }}
-          className="w-full accent-[#f3ad61]"
-        />
-      </div>
-
-      {/* OPACITY */}
-      <div className="min-w-[175px] shrink-0">
-        <div className="mb-1 flex items-center justify-between">
-          <label className="text-[9px] font-semibold text-white/50">
-            Opacity
-          </label>
-
-          <span className="text-[9px] text-white/50">
-            {Math.round(
-              (selectedText
-                ? selectedText.opacity
-                : textOpacity) * 100
-            )}
-            %
-          </span>
-        </div>
-
-        <input
-          type="range"
-          min="0.1"
-          max="1"
-          step="0.05"
-          value={
-            selectedText
-              ? selectedText.opacity
-              : textOpacity
-          }
-          onChange={(event) => {
-            const value =
-              Number(event.target.value);
-
-            if (selectedText) {
-              updateSelectedText({
-                opacity: value,
-              });
-            }
-
-            setTextOpacity(value);
-          }}
-          className="w-full accent-[#f3ad61]"
-        />
-      </div>
-    </div>
-
-    {/* SELECTED WORD / SENTENCE COLOR */}
+    {/* SELECTED WORD COLOR */}
     <div className="mt-2 rounded-lg border border-white/10 bg-[#161a1f] p-2">
-      <div className="mb-1 text-[9px] font-bold text-white/50">
-        Selected Word / Sentence Color
+
+      <div className="mb-1 flex items-center justify-between">
+        <span className="text-[9px] font-bold text-white/60">
+          Selected Word / Sentence
+        </span>
+
+        <span className="text-[8px] text-white/30">
+          {selectedWordRange
+            ? `${selectedWordRange.end - selectedWordRange.start} chars`
+            : 'Select text first'}
+        </span>
       </div>
 
-      <div className="flex gap-2 overflow-x-auto whitespace-nowrap scrollbar-hide">
-        {/* WORD COLOR */}
+      <div className="flex items-center gap-2">
+
         <input
           type="color"
           value={wordColor}
-          onChange={(event) =>
-            setWordColor(event.target.value)
+          onChange={(e) =>
+            setWordColor(e.target.value)
           }
-          className="h-8 w-10 shrink-0 cursor-pointer rounded-md border border-white/10 bg-transparent"
+          className="h-8 w-10 cursor-pointer rounded border border-white/10 bg-transparent"
         />
 
-        {/* APPLY */}
         <button
           type="button"
-          onClick={applyWordColor}
           disabled={!selectedWordRange}
-          className={`h-8 shrink-0 rounded-lg px-3 text-[10px] font-bold ${
+          onClick={() => {
+            if (!selectedText || !selectedWordRange) {
+              return;
+            }
+
+            const oldRanges =
+              selectedText.colorRanges ?? [];
+
+            const newRange = {
+              start: selectedWordRange.start,
+              end: selectedWordRange.end,
+              color: wordColor,
+            };
+
+            /*
+             * Remove/rebuild overlapping ranges.
+             * This prevents duplicate colors over same text.
+             */
+            const updatedRanges = oldRanges.filter(
+              (range) =>
+                range.end <= newRange.start ||
+                range.start >= newRange.end
+            );
+
+            updatedRanges.push(newRange);
+
+            updatedRanges.sort(
+              (a, b) => a.start - b.start
+            );
+
+            updateSelectedText({
+              colorRanges: updatedRanges,
+            });
+
+            setSelectedWordRange(null);
+          }}
+          className={`h-8 rounded-lg px-3 text-[10px] font-bold ${
             selectedWordRange
               ? 'bg-[#f3ad61] text-black'
               : 'bg-[#2b3238] text-white/30'
@@ -3768,23 +3643,44 @@ const handleTextPointerUp = (
           Apply
         </button>
 
-        {/* CLEAR */}
         <button
           type="button"
-          onClick={clearWordColor}
           disabled={!selectedWordRange}
-          className="h-8 shrink-0 rounded-lg border border-white/10 bg-[#2b3238] px-3 text-[10px] font-bold text-white"
+          onClick={() => {
+            if (!selectedText || !selectedWordRange) {
+              return;
+            }
+
+            const range = selectedWordRange;
+
+            const updatedRanges =
+              (selectedText.colorRanges ?? []).filter(
+                (item) =>
+                  item.end <= range.start ||
+                  item.start >= range.end
+              );
+
+            updateSelectedText({
+              colorRanges: updatedRanges,
+            });
+
+            setSelectedWordRange(null);
+          }}
+          className="h-8 rounded-lg bg-[#2b3238] px-3 text-[10px] font-bold text-white disabled:opacity-30"
         >
           Clear
         </button>
-        
-        {/* ADD / DONE */}
-    <div className="mt-0 flex gap-2">
+      </div>
+    </div>
+
+    {/* ADD / DONE */}
+    <div className="mt-2 flex gap-2">
+
       {!selectedText ? (
         <button
           type="button"
           onClick={addText}
-          className="h-8 w-25 flex-1 rounded-lg bg-[#f3ad61] text-[10px] font-black text-black"
+          className="h-8 flex-1 rounded-lg bg-[#f3ad61] text-[10px] font-black text-black"
         >
           + Add Text
         </button>
@@ -3798,19 +3694,15 @@ const handleTextPointerUp = (
             setNewText('');
             setActiveTool(null);
           }}
-          className="h-9 flex-1 rounded-lg bg-[#f3ad61] text-[10px] font-black text-black"
+          className="h-8 flex-1 rounded-lg bg-[#f3ad61] text-[10px] font-black text-black"
         >
-          Done Editing
+          Done
         </button>
       )}
     </div>
-      </div>
-    </div>
-
-    
   </section>
 )}
-
+                        {/* Text Ending */}
 
 
       {/* EDIT OVERLAY */}
