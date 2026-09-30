@@ -201,6 +201,20 @@ const getTextFont = (layer: TextLayer) =>
   }px "${layer.fontFamily}"`;
 
 export default function PhotoMixerPage() {
+
+      const initialPinchDistance = useRef<number | null>(null);
+const initialFontSize = useRef<number>(0);
+
+const getPinchDistance = (
+  p1: { clientX: number; clientY: number },
+  p2: { clientX: number; clientY: number }
+) => {
+  return Math.hypot(
+    p2.clientX - p1.clientX,
+    p2.clientY - p1.clientY
+  );
+};
+
   const backgroundInputRef =
     useRef<HTMLInputElement | null>(null);
 
@@ -928,9 +942,8 @@ const textPinchRef = useRef<{
         'text' &&
       dragging.id !== undefined
     ) {
-      setTextLayers(
-        (previous) =>
-          previous.map(
+      setTextLayers((previous) =>
+        previous.map(
             (layer) =>
               layer.id ===
               dragging.id
@@ -1257,8 +1270,7 @@ const textPinchRef = useRef<{
           previous.map(
             (layer) => {
               if (
-                layer.id !==
-                selectedTextId
+                layer.id !== selectedTextId
               ) {
                 return layer;
               }
@@ -3146,7 +3158,7 @@ const handleTextPointerUp = (
     )}
   </div>
 ))}
-                          {/*T-all*/}
+                          {/*T-all end*/}
             </div>
           </div>
 

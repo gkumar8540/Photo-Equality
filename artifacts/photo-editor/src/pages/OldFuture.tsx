@@ -7,7 +7,7 @@ import React, {
 } from "react";
 import { TopNavigation } from "../components/navigation/TopNavigation";
 
-type TemplateId = "pastFuture" | "thenNowFuture";
+type TemplateId = "thennow" | "thenNowFuture";
 type PanelId =
   | "template"
   | "effect"
@@ -40,9 +40,9 @@ const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 1200;
 
 const templates = {
-  pastFuture: {
-    name: "Past → Future",
-    description: "Old style + futuristic style",
+  thennow: {
+    name: "Then → Now",
+    description: "Then style + Now style",
   },
   thenNowFuture: {
     name: "Then → Now → Future",
@@ -69,7 +69,7 @@ export default function OldFuturePage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const [template, setTemplate] = useState<TemplateId>("pastFuture");
+  const [template, setTemplate] = useState<TemplateId>("thennow");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
   const [activePhoto, setActivePhoto] = useState(0);
 
@@ -78,8 +78,8 @@ export default function OldFuturePage() {
   const [background, setBackground] = useState("#10141c");
   const [frame, setFrame] = useState("none");
 
-  const [title, setTitle] = useState("THEN → FUTURE");
-  const [subtitle, setSubtitle] = useState("1990  •  2050");
+  const [title, setTitle] = useState("THEN → Now");
+  const [subtitle, setSubtitle] = useState("1990  •  Now");
 
   const [textItems, setTextItems] = useState<TextItem[]>([
     {
@@ -94,7 +94,7 @@ export default function OldFuturePage() {
     },
     {
       id: 2,
-      text: "FUTURE",
+      text: "Now",
       x: 900,
       y: 1100,
       size: 46,
@@ -129,7 +129,7 @@ export default function OldFuturePage() {
       id: Date.now() + index,
       src,
       x:
-        template === "pastFuture"
+        template === "thennow"
           ? index === 0
             ? 300
             : 900
@@ -141,7 +141,7 @@ export default function OldFuturePage() {
       y: 600,
       scale: 1,
       effect:
-        template === "pastFuture"
+        template === "thennow"
           ? index === 0
             ? "old"
             : "future"
@@ -157,7 +157,7 @@ export default function OldFuturePage() {
   const handleFiles = (files: FileList | null) => {
     if (!files || files.length === 0) return;
 
-    const maxPhotos = template === "pastFuture" ? 2 : 3;
+    const maxPhotos = template === "thennow" ? 2 : 3;
 
     const selected = Array.from(files).slice(
       0,
@@ -256,14 +256,14 @@ export default function OldFuturePage() {
   };
 
   const resetAll = () => {
-    setTemplate("pastFuture");
+    setTemplate("thennow");
     setPhotos([]);
     setActivePhoto(0);
     setBackground("#10141c");
     setFrame("none");
     setGlobalGrain(0);
     setGlobalGlow(0);
-    setTitle("THEN → FUTURE");
+    setTitle("THEN → Now");
     setSubtitle("1990  •  2050");
 
     setTextItems([
@@ -279,7 +279,7 @@ export default function OldFuturePage() {
       },
       {
         id: 2,
-        text: "FUTURE",
+        text: "Now",
         x: 900,
         y: 1100,
         size: 46,
@@ -581,12 +581,12 @@ export default function OldFuturePage() {
       }
 
       const boxWidth =
-        template === "pastFuture"
+        template === "thennow"
           ? 520
           : 350;
 
       const boxHeight =
-        template === "pastFuture"
+        template === "thennow"
           ? 760
           : 760;
 
@@ -676,13 +676,13 @@ export default function OldFuturePage() {
 
     // Divider
     ctx.strokeStyle =
-      template === "pastFuture"
+      template === "thennow"
         ? "rgba(255,255,255,0.18)"
         : "rgba(80,220,255,0.4)";
 
     ctx.lineWidth = 4;
 
-    if (template === "pastFuture") {
+    if (template === "thennow") {
       ctx.beginPath();
       ctx.moveTo(CANVAS_WIDTH / 2, 190);
       ctx.lineTo(CANVAS_WIDTH / 2, 1000);
@@ -923,8 +923,8 @@ export default function OldFuturePage() {
   ) => {
     setTemplate(value);
 
-    if (value === "pastFuture") {
-      setTitle("THEN → FUTURE");
+    if (value === "thennow") {
+      setTitle("THEN → Now");
       setSubtitle("1990  •  2050");
 
       setTextItems([
@@ -940,7 +940,7 @@ export default function OldFuturePage() {
         },
         {
           id: 2,
-          text: "FUTURE",
+          text: "Now",
           x: 900,
           y: 1100,
           size: 46,
@@ -1017,25 +1017,21 @@ export default function OldFuturePage() {
 
       <main className="mx-auto w-full max-w-[1450px] px-2 pb-6 pt-3 sm:px-4">
         {/* HEADER */}
-        <div className="mb-3 rounded-xl border border-white/10 bg-[#20242c] p-3">
+        <div className="mb-1.5 rounded-xl border border-white/10 bg-[#20242c] p-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-base font-bold sm:text-lg">
-                Old vs Future
-              </h1>
+            <div className="flex items-center gap-6">
+  <button
+    type="button"
+    onClick={uploadClick}
+    className="w-fit min-h-10 rounded-lg bg-[#f3ad61] px-4 text-sm font-bold text-black transition hover:brightness-110 active:scale-[0.98]"
+  >
+    + Add Photo
+  </button>
 
-              <p className="text-xs text-white/50">
-                Create a ready-made timeline design
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={uploadClick}
-              className="min-h-10 rounded-lg bg-[#f3ad61] px-4 text-sm font-bold text-black transition hover:brightness-110 active:scale-[0.98]"
-            >
-              + Add Photo
-            </button>
+  <h1 className="text-sm text-white/70">
+    Create a timeline design
+  </h1>
+</div>
 
             <input
               ref={fileInputRef}
@@ -1166,12 +1162,12 @@ export default function OldFuturePage() {
                     ),
                   )}
 
-                  <button
+                  {/*<button
                     onClick={uploadClick}
                     className="w-full rounded-xl border border-dashed border-white/20 bg-white/5 p-4 text-center text-sm font-semibold"
                   >
                     📷 Upload Photos
-                  </button>
+                  </button>*/}
                 </div>
               )}
 
@@ -1584,7 +1580,7 @@ export default function OldFuturePage() {
             <div className="grid grid-cols-3 gap-2">
               {Array.from({
                 length:
-                  template === "pastFuture"
+                  template === "thennow"
                     ? 2
                     : 3,
               }).map((_, index) => {
@@ -1664,11 +1660,11 @@ export default function OldFuturePage() {
               </div>
 
               <div>
-                • Drag directly on canvas.
+                • Drag directly on Board
               </div>
 
               <div>
-                • Use Effects for old/future
+                • Use Effects for Then/Now
                 look.
               </div>
 
@@ -1696,12 +1692,12 @@ export default function OldFuturePage() {
               Edit
             </button>
 
-            <button
+            {/*<button
               onClick={uploadClick}
               className="min-h-11 rounded-lg bg-white/5 px-2 text-xs font-bold text-white/80 hover:bg-white/10"
             >
               Add Photo
-            </button>
+            </button>*/}
 
             <button
               onClick={downloadImage}

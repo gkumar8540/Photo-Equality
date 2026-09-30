@@ -1,3 +1,5 @@
+import { App as CapacitorApp } from "@capacitor/app";
+
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
 import { Capacitor } from '@capacitor/core';
@@ -375,7 +377,7 @@ function PhotoEditor() {
             if (bridge && typeof bridge.saveBase64ImageToDownloads === 'function') {
               const success = bridge.saveBase64ImageToDownloads(base64Data, finalFileName);
               if (success) {
-                setExportMessage('PNG saved to your device.');
+                setExportMessage('Image saved to your device.');
               } else {
                 setExportMessage('Failed to save image. Please try again.');
               }
@@ -555,14 +557,14 @@ function PhotoEditor() {
           </div>
         </div>
         <TopNavigation>
-          <div className="items-center grid w-full px-2 py-1 grid-cols-5 gap-3">
+          <div className="items-center grid w-full px-2 py-1 grid-cols-3 gap-3">
           <a href="/nav/mixer" className="flex items-center justify-center rounded-md h-6 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
-          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Side</a>
-          <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mobile</a>
+          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Then-Now</a>
+          <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pending</a>
           {/*<a href="/nav/breadcrumb" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
           <a href="/nav/bottom" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
-          <a href="/nav/orbit" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
-          <a href="/nav/pulse" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pulse</a>
+          {/*<a href="/nav/orbit" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
+          <a href="/nav/pulse" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pulse</a>*/}
           </div>
         </TopNavigation>
         <div className="flex items-center gap-2">
@@ -958,6 +960,22 @@ function NotFound() {
 }
 
 function App() {
+
+useEffect(() => {
+  const handleBackButton = async () => {
+    window.history.back();
+  };
+
+  const listener = CapacitorApp.addListener(
+    "backButton",
+    handleBackButton
+  );
+
+  return () => {
+    listener.then((handle) => handle.remove());
+  };
+}, []);
+
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Switch>

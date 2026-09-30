@@ -1,5 +1,5 @@
 import { MobileNavigation } from '../components/navigation/MobileNavigation';
 
 export default function MobileNavigationPage() {
-  return <MobileNavigation><a href="/" className="text-sm text-[#f3ad61]">Editor</a></MobileNavigation>;
+  return <MobileNavigation><a href="/" className="text-sm text-[#f3ad61]">New features jald hi add hoga</a></MobileNavigation>;
 }
