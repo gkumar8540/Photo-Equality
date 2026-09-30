@@ -961,20 +961,42 @@ function NotFound() {
 
 function App() {
 
-useEffect(() => {
-  const handleBackButton = async () => {
-    window.history.back();
+  useEffect(() => {
+  let backListener: any;
+  const basePath = import.meta.env.BASE_URL.replace(/\/$/, '');
+
+  const setupBackButton = async () => {
+    backListener = await CapacitorApp.addListener(
+      "backButton",
+      (event: { canGoBack: boolean }) => {
+        const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+        const routePath = basePath && currentPath.startsWith(basePath)
+          ? currentPath.slice(basePath.length) || '/'
+          : currentPath;
+
+        if (routePath === '/') {
+          CapacitorApp.exitApp();
+          return;
+        }
+
+        if (!event.canGoBack) {
+          CapacitorApp.exitApp();
+          return;
+        }
+
+        window.history.back();
+      }
+    );
   };
 
-  const listener = CapacitorApp.addListener(
-    "backButton",
-    handleBackButton
-  );
+  setupBackButton();
 
   return () => {
-    listener.then((handle) => handle.remove());
+    backListener?.remove();
   };
 }, []);
+
+
 
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
