@@ -126,9 +126,9 @@ button { -webkit-tap-highlight-color: transparent; }
     position: sticky;
     top: 0;
     z-index: 20;
-    min-height: min(62dvh, 520px);
-    max-height: 62dvh;
-    overflow-y: auto;
+    min-height: 0;
+    max-height: none;
+    overflow: visible;
     box-shadow: 0 12px 28px rgba(0, 0, 0, .28);
   }
   .mobile-preview canvas { max-height: calc(62dvh - 112px); }

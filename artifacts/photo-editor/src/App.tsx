@@ -175,6 +175,23 @@ function PhotoEditor() {
   const [controls, setControls] = useState<Controls>(defaultControls);
   const [rotation, setRotation] = useState(0);
   const [cropMode, setCropMode] = useState(false);
+  const [toolsOpen, setToolsOpen] = useState(false);
+  useEffect(() => {
+  const handleOutsideClick = (event: MouseEvent) => {
+    const target = event.target as HTMLElement;
+
+    if (!target.closest("[data-tools-menu]") && !cropMode) {
+      setToolsOpen(false);
+    }
+  };
+
+  document.addEventListener("mousedown", handleOutsideClick);
+
+  return () => {
+    document.removeEventListener("mousedown", handleOutsideClick);
+  };
+}, [cropMode]);
+
   const [showAdjustments, setShowAdjustments] = useState(false);
   useEffect(() => {
   if (!showAdjustments) return;
@@ -193,6 +210,7 @@ function PhotoEditor() {
   const [appliedCrop, setAppliedCrop] = useState<CropRect | null>(null);
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [exportMessage, setExportMessage] = useState('');
+  const [downloadComplete, setDownloadComplete] = useState(false);
   const cropInteractionRef = useRef<{
     type: 'draw' | 'resize';
     edge?: CropEdge;
@@ -323,6 +341,7 @@ function PhotoEditor() {
     setFileName(file.name);
     setFileSize(file.size);
     setExportMessage('');
+    setDownloadComplete(false);
     setControls(defaultControls);
     setRotation(0);
     setCropMode(false);
@@ -347,12 +366,14 @@ function PhotoEditor() {
     setCropRect(null);
     setAppliedCrop(null);
     setExportMessage('Edits reset to the original image.');
+    setDownloadComplete(false);
   };
 
   const downloadImage = () => {
     const canvas = canvasRef.current;
     if (!canvas || !hasImage) return;
     setExportMessage('Preparing PNG…');
+    setDownloadComplete(false);
 
     const baseName = fileName.replace(/\.[^/.]+$/, '').replace(/[^a-z0-9-_]+/gi, '-').replace(/^-|-$/g, '') || 'edited-image';
     const finalFileName = `${baseName}-Equality.png`;
@@ -377,7 +398,9 @@ function PhotoEditor() {
             if (bridge && typeof bridge.saveBase64ImageToDownloads === 'function') {
               const success = bridge.saveBase64ImageToDownloads(base64Data, finalFileName);
               if (success) {
+                setDownloadComplete(true);
                 setExportMessage('Image saved to your device.');
+                window.setTimeout(() => setDownloadComplete(false), 2500);
               } else {
                 setExportMessage('Failed to save image. Please try again.');
               }
@@ -386,7 +409,9 @@ function PhotoEditor() {
               if (win.AndroidDownloadBridge && typeof win.AndroidDownloadBridge.saveBase64ImageToDownloads === 'function') {
                 const retrySuccess = win.AndroidDownloadBridge.saveBase64ImageToDownloads(base64Data, finalFileName);
                 if (retrySuccess) {
+                  setDownloadComplete(true);
                   setExportMessage('PNG saved to your device.');
+                  window.setTimeout(() => setDownloadComplete(false), 2500);
                   window.setTimeout(() => setExportMessage(''), 3500);
                   return;
                 }
@@ -404,11 +429,14 @@ function PhotoEditor() {
       }
 
       const link = document.createElement('a');
+      const objectUrl = URL.createObjectURL(blob);
       link.download = finalFileName;
-      link.href = URL.createObjectURL(blob);
+      link.href = objectUrl;
       link.click();
-      URL.revokeObjectURL(link.href);
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1500);
+      setDownloadComplete(true);
       setExportMessage('PNG saved to your device.');
+      window.setTimeout(() => setDownloadComplete(false), 2500);
       window.setTimeout(() => setExportMessage(''), 3500);
     }, 'image/png');
   };
@@ -422,11 +450,9 @@ function PhotoEditor() {
   };
                                
   const beginCrop = (event: PointerEvent<HTMLDivElement>) => {
-    if (cropRect && (cropRect.x !== 0 || cropRect.y !== 0 || cropRect.w !== 0 || cropRect.h !== 0)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     const point = pointFromEvent(event);
     cropInteractionRef.current = { type: 'draw', start: point };
-    setCropRect({ x: point.x, y: point.y, w: 0.01, h: 0.01 });
   };
 
   const beginResize = (event: PointerEvent<HTMLSpanElement>, edge: CropEdge) => {
@@ -471,6 +497,12 @@ function PhotoEditor() {
     if (interaction.type !== 'draw') return;
     const start = interaction.start;
     const point = pointFromEvent(event);
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const dragDistance = Math.hypot(
+      (point.x - start.x) * bounds.width,
+      (point.y - start.y) * bounds.height
+    );
+    if (dragDistance < 6) return;
 
     let x = Math.min(start.x, point.x);
     let y = Math.min(start.y, point.y);
@@ -528,8 +560,8 @@ function PhotoEditor() {
 }, [isLooksOpen]);
 
   return (
-    <main className="min-h-[100dvh] pb-16 bg-[#1d3255] text-[#ede7db]">
-      <header className="flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-2 sm:px-7">
+    <main className="min-h-[100dvh] bg-[#1d3255] pb-[calc(0rem+env(safe-area-inset-bottom))] text-[#ede7db] md:pb-0">
+      <header className="relative z-50 flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-2 sm:px-7">
         <div className="flex items-center gap-3">
         
      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
@@ -545,10 +577,11 @@ function PhotoEditor() {
               <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>
 
             <div className="ml-auto flex items-center">
-              <button type="button"onClick={downloadImage}disabled={!hasImage}
-               className="control-button flex items-center justify-center rounded-md bg-[#f1ae62] ml-8.5 px-2 py-1.5 text-[9px] gap-0.5 font-bold text-[#24272a] hover:bg-[#ffc47e] disabled:cursor-not-allowed disabled:opacity-40"
+              <button type="button" onClick={downloadImage} disabled={!hasImage}
+               className={`control-button ml-5.5 flex items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[9px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${downloadComplete ? 'bg-emerald-500 text-black' : 'bg-[#f1ae62] text-[#24272a] hover:bg-[#ffc47e]'}`}
                data-testid="button-download">
-               <Download size={14} />Save{/*<ArrowUpRight size={19}/>*/}
+               {downloadComplete ? <Check size={14} /> : <Download size={14} />}
+               {downloadComplete ? 'Saved' : 'Save'}
               </button>
             </div>
 
@@ -579,95 +612,13 @@ function PhotoEditor() {
         </div>
       </header>
 
-    <div className="mx-auto grid min-h-[calc(88dvh-72px)] max-w-[1640px] grid-cols-1 lg:grid-cols-[260px_minmax(0,1fr)_272px] bg-[#111419]">
-{/*aside1*/}
-       <aside className="order-2 border-t border-[#8ea8c5] bg-[#0c1d39] mb-5 pb-14 p-4 lg:order-1 lg:border-r lg:border-t-0 lg:p-6">
-          {/*<div className="mb-6 flex items-center justify-between">
-            <div>
-              <p className="mt-0.2 text-[16px] font-bold text-[#eee7db]">|| Adjustments ||</p>
-            </div>
-            <SlidersHorizontal size={16} className="text-[#8a8f8f]" />
-          </div>*/}
-
-  
-
-          <div className="h-1">
-            <p className="mb-0  font-mono text-[11px] uppercase tracking-[.18em] text-[#777e80]">Tools</p>
-            <div className="grid grid-cols-3 gap-2">
-              <button type="button" onClick={() => { setCropMode((mode) => !mode); if (!cropRect) setCropRect({ x: 0, y: 0, w: 1, h: 1 }); }} disabled={!hasImage} className={`control-button flex justify-center flex items-center gap-1.5 rounded-lg border py-1 text-[3px] font-semibold ${cropMode ? 'border-[#f3ad61] bg-[#342b23] text-[#f3b572]' : 'border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]'} disabled:cursor-not-allowed disabled:opacity-40`} data-testid="button-toggle-crop">
-                <Crop size={14} /> Crop
-              </button>
-              <button type="button" onClick={() => rotate('left')} disabled={!hasImage} className="control-button flex justify-center flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-1 text-[3px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-left">
-                <RotateCcw size={14} /> Left
-              </button>
-              <button type="button" onClick={() => rotate('right')} disabled={!hasImage} className="control-button flex justify-center flex items-center gap-1.5 rounded-lg border border-[#30363d] bg-[#20252b] py-1 text-[3px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40" data-testid="button-rotate-right">
-                <RotateCw size={14} /> Right
-              </button>
-            </div>
-          </div>
-
-       {cropMode && hasImage && (
-            <div className="flex items-center justify-center justify-between border-t border-[#2b3138] bg-[#171b20] px-4 py-3 sm:px-5">
-             {/* <p className="flex items-center gap-2 text-[10px] text-[#a4a7a2]"><Crop size={14} className="text-[#e9a65e]" /> Drag across the image to set a crop</p>*/}
-              <div className="flex gap-2">
-                <button type="button" onClick={() => { setCropMode(false); setCropRect(null); }} className="control-button rounded-md px-3 py-2 text-[10px] font-bold text-[#ffffff] bg-[#991B1B]" data-testid="button-cancel-crop">Cancel</button>
-                <button type="button" onClick={() => { if (cropRect) setAppliedCrop(cropRect); setCropMode(false); }} disabled={!cropRect} className="control-button flex items-center gap-1 rounded-md bg-[#efaa60] px-2 py-2 text-[4px] font-bold text-[#26282a] hover:bg-[#ffc17c] disabled:opacity-50" data-testid="button-apply-crop"><Check size={15} /> Apply crop</button>
-              </div>
-            </div>
-          )}
-
-          {/*<div className="mt-6 rounded-xl border border-[#30363d] bg-[#1c2127] p-3.5">
-            <div className="flex items-start gap-2.5">
-              <MousePointer2 size={14} className="mt-0.5 shrink-0 text-[#dd9f5c]" />
-              <div>
-                <p className="text-[10px] font-bold text-[#d8d4cc]">Small moves, big difference</p>
-                <p className="mt-1 text-[10px] leading-relaxed text-[#858b8d]">Every slider updates the Image as you move. Your original stays untouched.</p>
-              </div>
-            </div>
-          </div>*/}
-        </aside>
-
-        <section className=" studio-grid mobile-preview order-1 flex min-h-fit flex-col bg-[#294169] lg:order-2">
+    <div className="mx-auto grid min-h-[65vh] max-w-[1640px] grid-cols-1 bg-[#111419] md:min-h-[calc(88dvh-72px)]">
+        <section className="studio-grid mobile-preview flex min-h-fit flex-col bg-[#294169]">
           <div className="flex items-center justify-between border-b border-[#4271ff] px-4 py-0.5 sm:px-6">
             <div className="flex items-center gap-2">
               <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#1c8d15]'}`} />
               <span className="font-mono text-[10px] uppercase tracking-[.16em] text-[#989d9b]">{hasImage ? 'Live preview' : 'Ready when you are'}</span>
             </div>
-
-                 {hasImage && (
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                          onClick={() => {
-                          setSourceUrl('');
-                          setFileName('');
-                          setFileSize(0);
-                          setControls(defaultControls);
-                          setRotation(0);
-                          setCropMode(false);
-                          setCropRect(null);
-                          setAppliedCrop(null);
-                          setExportMessage('');
-                          }}
-                          className="rounded-md px-2 py-0 mr-5 text-[10px] font-bold hoverf:text-[#ffffff] bg-[#dc2626]">
-                         Remove
-                      </button>
-
-                  {/* <div className="flex items-center gap-3 font-mono text-[10px] text-[#737b7c]">
-                    <span>{rotation}°</span>
-                    <span className="h-3 w-px bg-[#384047]" />
-                    <span>{Math.round(previewAspect * 100) / 100}:1</span>
-                   </div>*/}
-                  </div>
-                )}
-
-             {hasImage && (
-              <div className="flex items-center gap-3 font-mono text-[10px] text-[#737b7c]">
-                <span>{rotation}°</span>
-                <span className="h-3 w-px bg-[#384047]" />
-                <span>{Math.round(previewAspect * 100) / 100}:1</span>
-              </div>
-            )}
           </div>
           <div
             className={`relative flex flex-1 items-center justify-center p-3.5 sm:p-8 ${isDraggingFile ? 'bg-[#26231f]' : ''}`}
@@ -676,13 +627,13 @@ function PhotoEditor() {
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[400px] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-2xl border border-[#db2777] bg-[#ffffff] px-7  text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[59vh] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-sm border border-[#db2777] bg-[#ffffff] px-1 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors sm:min-h-[400px] sm:px-7 ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
                     <ImagePlus size={27} strokeWidth={1.5} />
                   </div>
-                  <h3 className="text-x pt-2 font-extrabold tracking-[-.035em] text-[#6b7280] sm:text-2xl">Edit Enhance Create.</h3>
+                  <h3 className="pt-2 text-lg font-extrabold tracking-[-.035em] text-[#6b7280] sm:text-2xl">Edit Enhance Create.</h3>
                   <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#6b7280]">Your images Your edits Your control.</p>
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#443528] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#3a3025]" data-testid="button-choose-image">
                     <UploadCloud size={15}/> Choose image
@@ -692,10 +643,10 @@ function PhotoEditor() {
               </div>
             ) : (
               <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
-                <div className="checkerboard relative overflow-hidden rounded-xl border border-[#303840] p-2 shadow-[0_24px_70px_rgba(0,0,0,.34)] w-full flex items-center justify-center min-h-[350px]">
-                  <div className="relative block max-w-full max-h-[calc(100dvh-230px)] h-auto min-w-[260px]">
-                    <canvas ref={canvasRef} className="block max-h-[calc(100dvh-230px)] max-w-full rounded-lg object-contain h-auto min-w-[260px]" style={{ imageRendering: 'auto' }} data-testid="canvas-preview" />
-                    {cropMode && cropRect && (
+                <div className="checkerboard relative flex min-h-[58vh] w-full items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
+                  <div className="relative block h-auto max-h-[calc(100dvh-130px)] max-w-full">
+                    <canvas ref={canvasRef} className="block h-auto max-h-[calc(100dvh-230px)] max-w-full rounded-0 object-contain" style={{ imageRendering: 'auto', maxHeight: window.innerWidth < 768 ? 'calc(100dvh - 300px)' : 'calc(100dvh - 230px)' }} data-testid="canvas-preview" />
+                    {cropMode && (
                       <div
                         className="absolute inset-0 cursor-crosshair touch-none"
                         onPointerDown={beginCrop}
@@ -703,6 +654,7 @@ function PhotoEditor() {
                         onPointerUp={endCrop}
                         onPointerCancel={endCrop}
                         data-testid="crop-overlay">
+                        {cropRect && (
                         <div onPointerDown={(event) => event.stopPropagation()} className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
                           <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
                             <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
@@ -722,6 +674,7 @@ function PhotoEditor() {
                           <span onPointerDown={(event) => beginResize(event, 'bottom-left')} className="absolute -bottom-2 -left-2 h-4 w-4 cursor-nesw-resize" />
                           <span onPointerDown={(event) => beginResize(event, 'left')} className="absolute -left-2 -top-1/2 h-full w-4 cursor-ew-resize" />
                         </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -729,66 +682,41 @@ function PhotoEditor() {
               </div>
             )}
           </div>
-          {/*cropMode && hasImage && (
-            <div className="flex items-center justify-between border-t border-[#2b3138] bg-[#171b20] px-4 py-3 sm:px-6">
-              <p className="flex items-center gap-2 text-[10px] text-[#a4a7a2]"><Crop size={14} className="text-[#e9a65e]" /> Drag across the image to set a crop</p>
-              <div className="flex gap-2">
-                <button type="button" onClick={() => { setCropMode(false); setCropRect(null); }} className="control-button rounded-md px-3 py-2 text-[10px] font-bold text-[#a9adaa] hover:bg-[#252b31]" data-testid="button-cancel-crop">Cancel</button>
-                <button type="button" onClick={() => { if (cropRect) setAppliedCrop(cropRect); setCropMode(false); }} disabled={!cropRect} className="control-button flex items-center gap-1.5 rounded-md bg-[#efaa60] px-3 py-2 text-[10px] font-bold text-[#26282a] hover:bg-[#ffc17c] disabled:opacity-50" data-testid="button-apply-crop"><Check size={13} /> Apply crop</button>
-              </div>
+          
+          {cropMode && hasImage && (
+            <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-2 right-2 z-[9999] mx-auto flex max-w-[760px] items-center justify-between gap-3 rounded-lg border border-[#30363d] bg-[#171b20]/95 px-3 py-2 shadow-xl">
+              {/*<p className="flex items-center gap-2 text-[10px] text-[#a4a7a2]"><Crop size={14} className="text-[#e9a65e]" /> Drag an edge or corner to adjust the crop</p>
+              <div className="flex shrink-0 gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropInteractionRef.current = null;
+                    setCropMode(false);
+                    setCropRect(null);
+                  }}
+                  className="control-button rounded-md px-3 py-2 text-[10px] font-bold text-[#a9adaa] hover:bg-[#252b31]"
+                  data-testid="button-cancel-crop"
+                >
+                  Cancel
+                </button>
+              </div>*/}
             </div>
-          )*/}
+          )}
         </section>
 
-{/*aside2*/}
-  <aside className={`order-3 border-t max-h-[0dvh] border-[#9daeb2] bg-[#0c1d39] transition-all duration-300 lg:border-l lg:border-t-0 ${ isLooksOpen ? "p-5 lg:p-6" : "p-0.5 lg:p-4"}`}>
-   
-         {/* <div className="mt-6 border-t border-[#2a3036] pt-5">
-            <p className="mb-3 font-mono text-[9px] uppercase tracking-[.18em] text-[#777e80]">Image details</p>
-            {hasImage ? (
-              <div className="space-y-3">
-                <div className="flex items-start gap-2.5">
-                  <FileImage size={15} className="mt-0.5 shrink-0 text-[#d79c59]" />
-                  <div className="min-w-0">
-                    <p className="truncate text-[11px] font-bold text-[#dcd8cf]" data-testid="text-file-name">{fileName}</p>
-                    <p className="mt-0.5 font-mono text-[9px] text-[#7f8788]" data-testid="text-file-size">{formatBytes(fileSize)}</p>
-                  </div>
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="rounded-lg border border-[#30363d] bg-[#20252b] p-2.5">
-                    <p className="font-mono text-[9px] uppercase tracking-wider text-[#777f80]">Width</p>
-                    <p className="mt-1 font-mono text-[11px] text-[#d9d2c5]" data-testid="text-image-width">{dimensions.width.toLocaleString()} px</p>
-                  </div>
-                  <div className="rounded-lg border border-[#30363d] bg-[#20252b] p-2.5">
-                    <p className="font-mono text-[9px] uppercase tracking-wider text-[#777f80]">Height</p>
-                    <p className="mt-1 font-mono text-[11px] text-[#d9d2c5]" data-testid="text-image-height">{dimensions.height.toLocaleString()} px</p>
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="rounded-xl border border-dashed border-[#343b40] bg-[#1c2127] p-4">
-                <Info size={16} className="mb-2 text-[#b28151]" />
-                <p className="text-[10px] leading-relaxed text-[#838a8a]">Your image dimensions, filename, and export details will appear here.</p>
-              </div>
-            )}
-          </div>
-          <div className="mt-5 rounded-xl border border-[#30363d] bg-[#1c2127] p-3.5">
-            <div className="flex items-center gap-2 text-[10px] font-bold text-[#d7d0c3]"><Maximize2 size={13} className="text-[#dc9f5b]" /> Export at full size</div>
-            <p className="mt-1.5 text-[10px] leading-relaxed text-[#858b8d]">Your PNG keeps the source canvas dimensions and all current adjustments.</p>
-          </div>*/}
-  </aside>
+
     </div>
 
-  <footer className=" fixed bottom-0 left-0 z-50 w-full  flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-2 sm:flex-row sm:items-center sm:px-7">
+  <footer className=" fixed bottom-0 left-0 z-50 w-full flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-2 sm:flex-row sm:items-center sm:px-7">
         <div className="flex min-h-2 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
         {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]"/> Edits are private by default</>}
         </div>
 
-     <div className="flex w-full items-center gap-2">
-      <div className="relative">
+    <div className="flex w-full items-center gap-2">
+     <div className="relative">
       <button type="button" onClick={(event) => { event.stopPropagation();
       setShowAdjustments((value) => !value);}}
-      className="flex w-20.5 items-center justify-between rounded-lg border border-[#30363d] bg-[#20252b] px-3 py-2.5 text-left">
+      className="flex w-20.5 items-center justify-between rounded-lg border border-[#30363d] bg-[#20252b] px-3 py-2 text-left">
       <span className="text-[14px] font-bold text-[#eee7db]">
       Adjust
       </span>
@@ -942,7 +870,98 @@ function PhotoEditor() {
     </div>
   )}
 </div>
-      <span className="ml-20">
+
+
+<div className="relative" data-tools-menu>
+
+  {/* Small Tools Button */}
+  <button
+    type="button"
+    disabled={!hasImage}
+    onClick={(e) => {
+      e.stopPropagation();
+      setToolsOpen((prev) => !prev);
+    }}
+    className="control-button flex items-center justify-center rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
+    data-testid="button-tools"
+  >
+    Tools
+  </button>
+
+  {/* Tools Popup */}
+  {toolsOpen && (
+    <div
+      onMouseDown={(e) => e.stopPropagation()}
+      className="absolute left-1/9 bottom-full z-50 mb-10 w-78 -translate-x-1/2 flex items-center justify-center gap-6 rounded-lg border border-[#30363d] bg-[#9ca3af] px-5 py-1 shadow-xl"
+    >
+
+      {/* Crop */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          if (cropMode) {
+            if (cropRect) setAppliedCrop(cropRect);
+            setCropMode(false);
+            setCropRect(null);
+            cropInteractionRef.current = null;
+            return;
+          }
+
+          setCropMode(true);
+          setCropRect({ x: 0, y: 0, w: 1, h: 1 });
+        }}
+        disabled={!hasImage}
+        className={`control-button flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[9px] font-semibold ${
+          cropMode
+            ? "border-[#f3ad61] bg-[#342b23] text-[#f3b572]"
+            : "border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]"
+        } disabled:cursor-not-allowed disabled:opacity-40`}
+        data-testid="button-toggle-crop"
+      >
+        <Crop size={13} />
+        {cropMode ? 'Apply' : 'Crop'}
+      </button>
+
+      {/* Left */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          rotate("left");
+          setToolsOpen(false);
+        }}
+        disabled={!hasImage}
+        className="control-button flex items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
+        data-testid="button-rotate-left"
+      >
+        <RotateCcw size={13} />
+        Left
+      </button>
+
+      {/* Right */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          rotate("right");
+          setToolsOpen(false);
+        }}
+        disabled={!hasImage}
+        className="control-button flex items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
+        data-testid="button-rotate-right"
+      >
+        <RotateCw size={13} />
+        Right
+      </button>
+
+    </div>
+  )}
+
+</div>
+      
+
+      <span className="ml-0">
       <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#394047] bg-[#20252b] px-3.5 py-2.5 text-[11px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-reset-all">
       <RotateCcw size={14} /> Reset
       </button>

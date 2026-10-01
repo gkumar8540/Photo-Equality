@@ -91,6 +91,16 @@ type FilterPreset =
   | 'noir'
   | 'vintage';
 
+type PhotoLayer = {
+  id: number;
+  src: string;
+  naturalWidth: number;
+  naturalHeight: number;
+  transform: PhotoTransform;
+  adjustments: Adjustments;
+  filterPreset: FilterPreset;
+};
+
 const SIZE_PRESETS = [
   { id: '9:16', label: '9:16', width: 1080, height: 1920 },
   { id: '16:9', label: '16:9', width: 1920, height: 1080 },
@@ -229,6 +239,12 @@ const getPinchDistance = (
 
   const cropFrameRef =
     useRef<HTMLDivElement | null>(null);
+  const photoTapRef = useRef<{
+    photoId: number;
+    time: number;
+    x: number;
+    y: number;
+  } | null>(null);
 
   const cropAnimationFrameRef =
     useRef<number | null>(null);
@@ -241,9 +257,16 @@ const getPinchDistance = (
 
   const [background, setBackground] =
     useState<string | null>(null);
+  const backgroundRef = useRef(background);
+  backgroundRef.current = background;
 
-  const [photo, setPhoto] =
-    useState<string | null>(null);
+  const [photoLayers, setPhotoLayers] =
+    useState<PhotoLayer[]>([]);
+  const photoLayersRef = useRef(photoLayers);
+  photoLayersRef.current = photoLayers;
+
+  const [selectedPhotoId, setSelectedPhotoId] =
+    useState<number | null>(null);
 
   const [backgroundColor, setBackgroundColor] =
     useState('#ffffff');
@@ -264,6 +287,15 @@ const [editingTextId, setEditingTextId] =
   const textPointersRef = useRef<
   Map<number, { x: number; y: number }>
 >(new Map());
+  const textGestureLayerIdRef = useRef<number | null>(null);
+  const textDragRef = useRef<{
+    pointerId: number;
+    layerId: number;
+    startX: number;
+    startY: number;
+    originalX: number;
+    originalY: number;
+  } | null>(null);
 
 const textPinchRef = useRef<{
   active: boolean;
@@ -315,24 +347,16 @@ const textPinchRef = useRef<{
       end: number;
     } | null>(null);
 
-  const [photoTransform, setPhotoTransform] =
-    useState<PhotoTransform>(
-      DEFAULT_PHOTO_TRANSFORM
-    );
-
-  const [adjustments, setAdjustments] =
-    useState<Adjustments>(
-      DEFAULT_ADJUSTMENTS
-    );
-
-  const [filterPreset, setFilterPreset] =
-    useState<FilterPreset>('original');
-
-  const [photoNaturalSize, setPhotoNaturalSize] =
-    useState({
-      width: 1,
-      height: 1,
-    });
+  const selectedPhoto = photoLayers.find(
+    (layer) => layer.id === selectedPhotoId
+  ) ?? null;
+  const photo = selectedPhoto?.src ?? null;
+  const photoTransform = selectedPhoto?.transform ?? DEFAULT_PHOTO_TRANSFORM;
+  const adjustments = selectedPhoto?.adjustments ?? DEFAULT_ADJUSTMENTS;
+  const filterPreset = selectedPhoto?.filterPreset ?? 'original';
+  const photoNaturalSize = selectedPhoto
+    ? { width: selectedPhoto.naturalWidth, height: selectedPhoto.naturalHeight }
+    : { width: 1, height: 1 };
 
   const [isCropping, setIsCropping] =
     useState(false);
@@ -352,6 +376,11 @@ const textPinchRef = useRef<{
   const cropInteractionRef = useRef<{
     mode:
       | 'move'
+      | 'draw'
+      | 'n'
+      | 'e'
+      | 's'
+      | 'w'
       | 'nw'
       | 'ne'
       | 'sw'
@@ -363,12 +392,13 @@ const textPinchRef = useRef<{
 
   const [dragging, setDragging] =
     useState<{
-      type: 'photo' | 'text';
+      type: 'photo' | 'resize' | 'text';
       id?: number;
       startX: number;
       startY: number;
       originalX: number;
       originalY: number;
+      originalWidth?: number;
     } | null>(null);
 
   const [downloadComplete, setDownloadComplete] =
@@ -377,7 +407,71 @@ const textPinchRef = useRef<{
   const [exportMessage, setExportMessage] =
     useState('');
 
-  const hasImage = Boolean(photo);
+  const hasImage = photoLayers.length > 0;
+
+  const updatePhotoLayer = (
+    id: number,
+    update: (layer: PhotoLayer) => PhotoLayer
+  ) => {
+    setPhotoLayers((previous) =>
+      previous.map((layer) =>
+        layer.id === id ? update(layer) : layer
+      )
+    );
+  };
+
+  const setPhotoTransform = (
+    update: PhotoTransform | ((current: PhotoTransform) => PhotoTransform)
+  ) => {
+    if (selectedPhotoId === null) return;
+
+    updatePhotoLayer(selectedPhotoId, (layer) => ({
+      ...layer,
+      transform: typeof update === 'function'
+        ? update(layer.transform)
+        : update,
+    }));
+  };
+
+  const setAdjustments = (
+    update: Adjustments | ((current: Adjustments) => Adjustments)
+  ) => {
+    if (selectedPhotoId === null) return;
+    updatePhotoLayer(selectedPhotoId, (layer) => ({
+      ...layer,
+      adjustments: typeof update === 'function'
+        ? update(layer.adjustments)
+        : update,
+    }));
+  };
+
+  const setFilterPreset = (nextPreset: FilterPreset) => {
+    if (selectedPhotoId === null) return;
+    updatePhotoLayer(selectedPhotoId, (layer) => ({
+      ...layer,
+      filterPreset: nextPreset,
+    }));
+  };
+
+  const setPhoto = (nextPhoto: string | null) => {
+    if (selectedPhotoId === null) return;
+
+    if (nextPhoto === null) {
+      setPhotoLayers((previous) =>
+        previous.filter((layer) => layer.id !== selectedPhotoId)
+      );
+      const nextLayer = photoLayers.find(
+        (layer) => layer.id !== selectedPhotoId
+      );
+      setSelectedPhotoId(nextLayer?.id ?? null);
+      return;
+    }
+
+    updatePhotoLayer(selectedPhotoId, (layer) => ({
+      ...layer,
+      src: nextPhoto,
+    }));
+  };
 
   const selectedText =
     selectedTextId !== null
@@ -394,34 +488,36 @@ const textPinchRef = useRef<{
     canvasSize.width /
     canvasSize.height;
 
-  const getFilterString = () => {
+  const getFilterString = (layer?: PhotoLayer) => {
+    const layerAdjustments = layer?.adjustments ?? adjustments;
+    const layerFilterPreset = layer?.filterPreset ?? filterPreset;
     const preset =
       FILTER_PRESETS.find(
         (item) =>
-          item.id === filterPreset
+          item.id === layerFilterPreset
       )?.filter ?? '';
 
     const parts = [
       `brightness(${
-        1 + adjustments.brightness / 100
+        1 + layerAdjustments.brightness / 100
       })`,
       `contrast(${
-        1 + adjustments.contrast / 100
+        1 + layerAdjustments.contrast / 100
       })`,
       `saturate(${
-        1 + adjustments.saturation / 100
+        1 + layerAdjustments.saturation / 100
       })`,
-      adjustments.blur > 0
-        ? `blur(${adjustments.blur}px)`
+      layerAdjustments.blur > 0
+        ? `blur(${layerAdjustments.blur}px)`
         : '',
-      adjustments.grayscale > 0
+      layerAdjustments.grayscale > 0
         ? `grayscale(${
-            adjustments.grayscale / 100
+            layerAdjustments.grayscale / 100
           })`
         : '',
-      adjustments.sepia > 0
+      layerAdjustments.sepia > 0
         ? `sepia(${
-            adjustments.sepia / 100
+            layerAdjustments.sepia / 100
           })`
         : '',
       preset,
@@ -443,8 +539,10 @@ const textPinchRef = useRef<{
 
   useEffect(() => {
     return () => {
-      revokeIfBlob(background);
-      revokeIfBlob(photo);
+      revokeIfBlob(backgroundRef.current);
+      photoLayersRef.current.forEach((layer) => {
+        revokeIfBlob(layer.src);
+      });
 
       if (
         cropAnimationFrameRef.current !== null
@@ -454,7 +552,7 @@ const textPinchRef = useRef<{
         );
       }
     };
-  }, [background, photo]);
+  }, []);
 
   /*
    * Close overlay when user clicks outside.
@@ -463,8 +561,8 @@ const textPinchRef = useRef<{
   useEffect(() => {
     if (!activeTool) return;
 
-    const handleOutsideClick = (
-      event: MouseEvent
+      const handleOutsideClick = (
+        event: PointerEvent
     ) => {
       const target =
         event.target as HTMLElement;
@@ -483,21 +581,31 @@ const textPinchRef = useRef<{
         return;
       }
 
+      const clickedBoard = target.closest('[data-photo-editor-board]');
+      const clickedPhoto = target.closest('[data-photo-layer]');
+      if (
+        clickedBoard &&
+        (clickedPhoto ||
+          (activeTool === 'text' && selectedTextId === null && newText.trim()))
+      ) {
+        return;
+      }
+
       setActiveTool(null);
     };
 
     document.addEventListener(
-      'mousedown',
+      'pointerdown',
       handleOutsideClick
     );
 
     return () => {
       document.removeEventListener(
-        'mousedown',
+        'pointerdown',
         handleOutsideClick
       );
     };
-  }, [activeTool]);
+  }, [activeTool, selectedTextId, newText]);
 
   useEffect(() => {
     if (
@@ -541,32 +649,43 @@ const textPinchRef = useRef<{
   const selectPhoto = async (
     event: ChangeEvent<HTMLInputElement>
   ) => {
-    const file =
-      event.target.files?.[0];
-
-    if (!file) return;
-
-    const url =
-      URL.createObjectURL(file);
+    const files = Array.from(event.target.files ?? []);
+    if (files.length === 0) return;
 
     try {
-      const image =
-        await loadImage(url);
-
-      revokeIfBlob(photo);
-
-      setPhoto(url);
-
-      setPhotoNaturalSize({
-        width:
-          image.naturalWidth || 1,
-        height:
-          image.naturalHeight || 1,
-      });
-
-      setPhotoTransform(
-        DEFAULT_PHOTO_TRANSFORM
+      const loadedLayers = await Promise.all(
+        files.map(async (file, index) => {
+          const src = URL.createObjectURL(file);
+          try {
+            const image = await loadImage(src);
+            const offset = photoLayers.length + index;
+            const layer: PhotoLayer = {
+              id: makeId(),
+              src,
+              naturalWidth: image.naturalWidth || 1,
+              naturalHeight: image.naturalHeight || 1,
+              transform: {
+                ...DEFAULT_PHOTO_TRANSFORM,
+                x: 50 + (offset % 5) * 3,
+                y: 50 + (offset % 5) * 3,
+              },
+              adjustments: { ...DEFAULT_ADJUSTMENTS },
+              filterPreset: 'original',
+            };
+            return layer;
+          } catch {
+            revokeIfBlob(src);
+            return null;
+          }
+        })
       );
+      const nextLayers = loadedLayers.filter(
+        (layer): layer is PhotoLayer => layer !== null
+      );
+      if (nextLayers.length === 0) throw new Error('No supported image files');
+
+      setPhotoLayers((previous) => [...previous, ...nextLayers]);
+      setSelectedPhotoId(nextLayers[nextLayers.length - 1].id);
 
       /*
        * Start crop exactly from image edges.
@@ -582,8 +701,6 @@ const textPinchRef = useRef<{
       setActiveTool(null);
       setExportMessage('');
     } catch {
-      revokeIfBlob(url);
-
       setExportMessage(
         'Unable to load image.'
       );
@@ -602,8 +719,8 @@ const textPinchRef = useRef<{
     setCropRect({
       x: 0,
       y: 0,
-      w: 1,
-      h: 1,
+      w: 100,
+      h: 100,
     });
 
     setIsCropping(true);
@@ -614,6 +731,10 @@ const textPinchRef = useRef<{
     event: ReactPointerEvent<HTMLDivElement>,
     mode:
       | 'move'
+      | 'n'
+      | 'e'
+      | 's'
+      | 'w'
       | 'nw'
       | 'ne'
       | 'sw'
@@ -819,6 +940,26 @@ const textPinchRef = useRef<{
         original.y;
     }
 
+    if (mode === 'n') {
+      const bottom = original.y + original.h;
+      next.y = clamp(original.y + dy, 0, bottom - 1);
+      next.h = bottom - next.y;
+    }
+
+    if (mode === 'e') {
+      next.w = clamp(original.w + dx, 1, 100 - original.x);
+    }
+
+    if (mode === 's') {
+      next.h = clamp(original.h + dy, 1, 100 - original.y);
+    }
+
+    if (mode === 'w') {
+      const right = original.x + original.w;
+      next.x = clamp(original.x + dx, 0, right - 1);
+      next.w = right - next.x;
+    }
+
     /*
      * Final safety clamp.
      */
@@ -915,24 +1056,36 @@ const textPinchRef = useRef<{
       100;
 
     if (
-      dragging.type ===
-      'photo'
+      (dragging.type === 'photo' || dragging.type === 'resize') &&
+      dragging.id !== undefined
     ) {
-      setPhotoTransform(
-        (previous) => ({
-          ...previous,
-          x: clamp(
-            dragging.originalX +
-              dx,
-            0,
-            100
-          ),
-          y: clamp(
-            dragging.originalY +
-              dy,
-            0,
-            100
-          ),
+      setPhotoLayers((previous) =>
+        previous.map((layer) => {
+          if (layer.id !== dragging.id) return layer;
+
+          if (dragging.type === 'resize') {
+            const widthDelta = ((dx / 100) + (dy / 100)) * 50;
+            return {
+              ...layer,
+              transform: {
+                ...layer.transform,
+                width: clamp(
+                  (dragging.originalWidth ?? layer.transform.width) + widthDelta,
+                  5,
+                  150
+                ),
+              },
+            };
+          }
+
+          return {
+            ...layer,
+            transform: {
+              ...layer.transform,
+              x: clamp(dragging.originalX + dx, 0, 100),
+              y: clamp(dragging.originalY + dy, 0, 100),
+            },
+          };
         })
       );
     }
@@ -1110,23 +1263,18 @@ const textPinchRef = useRef<{
           1
         );
 
+      if (selectedPhotoId === null) return;
       revokeIfBlob(photo);
-
-      setPhoto(croppedData);
-
-      setPhotoNaturalSize({
-        width:
-          outputCanvas.width,
-        height:
-          outputCanvas.height,
-      });
-
-      setPhotoTransform({
-        x: 50,
-        y: 50,
-        width: 76,
-        rotation: 0,
-      });
+      updatePhotoLayer(selectedPhotoId, (layer) => ({
+        ...layer,
+        src: croppedData,
+        naturalWidth: outputCanvas.width,
+        naturalHeight: outputCanvas.height,
+        transform: {
+          ...layer.transform,
+          rotation: 0,
+        },
+      }));
 
       setIsCropping(false);
 
@@ -1138,7 +1286,7 @@ const textPinchRef = useRef<{
         'original'
       );
 
-      setActiveTool('edit');
+      setActiveTool(null);
 
       setExportMessage(
         'Crop applied. Edit your photo below.'
@@ -1171,12 +1319,13 @@ const textPinchRef = useRef<{
 
     setIsCropping(false);
 
-    if (photo) {
-      setActiveTool('edit');
-    }
+    setActiveTool(null);
   };
 
-  const addText = () => {
+  const addText = (
+    position = { x: 50, y: 50 },
+    closeAfterAdd = false
+  ) => {
     const value =
       newText.trim();
 
@@ -1187,8 +1336,8 @@ const textPinchRef = useRef<{
     const layer: TextLayer = {
       id,
       text: value,
-      x: 50,
-      y: 50,
+      x: position.x,
+      y: position.y,
       fontSize: textSize,
       color: textColor,
       highlightedWords: [],
@@ -1207,11 +1356,42 @@ const textPinchRef = useRef<{
       ]
     );
 
-    setSelectedTextId(id);
     setSelectedWordRange(null);
-    setNewText(value);
 
-    setActiveTool('text');
+    if (closeAfterAdd) {
+      setSelectedTextId(null);
+      setEditingTextId(null);
+      setNewText('');
+      setActiveTool(null);
+    } else {
+      setSelectedTextId(id);
+      setNewText(value);
+      setActiveTool('text');
+    }
+  };
+
+  const handleCanvasClick = (
+    event: React.MouseEvent<HTMLDivElement>
+  ) => {
+    if (
+      activeTool !== 'text' ||
+      selectedTextId !== null ||
+      (event.target as HTMLElement).closest('[data-text-layer]')
+    ) {
+      return;
+    }
+
+    const value = newText.trim();
+    const rect = event.currentTarget.getBoundingClientRect();
+    if (!value || rect.width <= 0 || rect.height <= 0) return;
+
+    addText(
+      {
+        x: clamp(((event.clientX - rect.left) / rect.width) * 100, 0, 100),
+        y: clamp(((event.clientY - rect.top) / rect.height) * 100, 0, 100),
+      },
+      true
+    );
   };
 
   const updateSelectedText = (
@@ -1237,6 +1417,180 @@ const textPinchRef = useRef<{
         )
     );
   };
+
+    const getTextPointerDistance = () => {
+      const points = Array.from(
+        textPointersRef.current.values()
+      );
+
+      if (points.length < 2) return 0;
+
+      return Math.hypot(
+        points[1].x - points[0].x,
+        points[1].y - points[0].y
+      );
+    };
+
+    const handleTextPointerDown = (
+      event: ReactPointerEvent<HTMLDivElement>,
+      layer: TextLayer
+    ) => {
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (
+        textGestureLayerIdRef.current !== null &&
+        textGestureLayerIdRef.current !== layer.id
+      ) {
+        return;
+      }
+
+      textGestureLayerIdRef.current = layer.id;
+      setSelectedTextId(layer.id);
+      textPointersRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      try {
+        event.currentTarget.setPointerCapture(event.pointerId);
+      } catch {
+        // Ignore pointer capture errors.
+      }
+
+      if (textPointersRef.current.size >= 2) {
+        textPinchRef.current = {
+          active: true,
+          startDistance: getTextPointerDistance(),
+          startFontSize: layer.fontSize,
+        };
+        textDragRef.current = null;
+        return;
+      }
+
+      textDragRef.current = {
+        pointerId: event.pointerId,
+        layerId: layer.id,
+        startX: event.clientX,
+        startY: event.clientY,
+        originalX: layer.x,
+        originalY: layer.y,
+      };
+    };
+
+    const handleTextPointerMove = (
+      event: ReactPointerEvent<HTMLDivElement>,
+      layer: TextLayer
+    ) => {
+      if (!textPointersRef.current.has(event.pointerId)) return;
+
+      event.preventDefault();
+      textPointersRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+
+      if (
+        textPinchRef.current.active &&
+        textPointersRef.current.size >= 2
+      ) {
+        const { startDistance, startFontSize } = textPinchRef.current;
+        if (startDistance <= 0) return;
+
+        const fontSize = clamp(
+          Math.round(
+            startFontSize *
+              (getTextPointerDistance() / startDistance)
+          ),
+          12,
+          160
+        );
+
+        setTextLayers((previous) =>
+          previous.map((item) =>
+            item.id === layer.id
+              ? { ...item, fontSize }
+              : item
+          )
+        );
+        return;
+      }
+
+      const drag = textDragRef.current;
+      const stage = canvasAreaRef.current;
+      if (
+        !drag ||
+        drag.pointerId !== event.pointerId ||
+        !stage
+      ) {
+        return;
+      }
+
+      const rect = stage.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const x = clamp(
+        drag.originalX +
+          ((event.clientX - drag.startX) / rect.width) * 100,
+        0,
+        100
+      );
+      const y = clamp(
+        drag.originalY +
+          ((event.clientY - drag.startY) / rect.height) * 100,
+        0,
+        100
+      );
+
+      setTextLayers((previous) =>
+        previous.map((item) =>
+          item.id === drag.layerId
+            ? { ...item, x, y }
+            : item
+        )
+      );
+    };
+
+    const handleTextPointerUp = (
+      event: ReactPointerEvent<HTMLDivElement>,
+      layer: TextLayer
+    ) => {
+      textPointersRef.current.delete(event.pointerId);
+
+      try {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      } catch {
+        // Ignore pointer capture errors.
+      }
+
+      if (textPointersRef.current.size === 0) {
+        textGestureLayerIdRef.current = null;
+        textDragRef.current = null;
+        textPinchRef.current.active = false;
+        return;
+      }
+
+      if (textPointersRef.current.size < 2) {
+        textPinchRef.current.active = false;
+        const [pointerId, point] = Array.from(
+          textPointersRef.current.entries()
+        )[0];
+        const currentLayer = textLayers.find(
+          (item) => item.id === layer.id
+        );
+
+        if (currentLayer) {
+          textDragRef.current = {
+            pointerId,
+            layerId: layer.id,
+            startX: point.x,
+            startY: point.y,
+            originalX: currentLayer.x,
+            originalY: currentLayer.y,
+          };
+        }
+      }
+    };
 
   const deleteSelectedText = () => {
     if (
@@ -1462,10 +1816,35 @@ const textPinchRef = useRef<{
   };
 
   const beginPhotoDrag = (
-    event: ReactPointerEvent<HTMLImageElement>
+    event: ReactPointerEvent<HTMLImageElement>,
+    layer: PhotoLayer
   ) => {
     event.preventDefault();
     event.stopPropagation();
+
+    const now = Date.now();
+    const previousTap = photoTapRef.current;
+    const isDoubleTap = Boolean(
+      previousTap &&
+      previousTap.photoId === layer.id &&
+      now - previousTap.time <= 450 &&
+      Math.hypot(
+        event.clientX - previousTap.x,
+        event.clientY - previousTap.y
+      ) <= 32
+    );
+
+    if (isDoubleTap) {
+      photoTapRef.current = null;
+      setActiveTool('edit');
+    } else {
+      photoTapRef.current = {
+        photoId: layer.id,
+        time: now,
+        x: event.clientX,
+        y: event.clientY,
+      };
+    }
 
     if (!canvasAreaRef.current) {
       return;
@@ -1479,14 +1858,40 @@ const textPinchRef = useRef<{
       // Ignore pointer capture errors.
     }
 
+    setSelectedPhotoId(layer.id);
     setDragging({
       type: 'photo',
+      id: layer.id,
       startX: event.clientX,
       startY: event.clientY,
-      originalX:
-        photoTransform.x,
-      originalY:
-        photoTransform.y,
+      originalX: layer.transform.x,
+      originalY: layer.transform.y,
+    });
+  };
+
+  const beginPhotoResize = (
+    event: ReactPointerEvent<HTMLButtonElement>,
+    layer: PhotoLayer
+  ) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!canvasAreaRef.current) return;
+
+    try {
+      canvasAreaRef.current.setPointerCapture(event.pointerId);
+    } catch {
+      // Ignore pointer capture errors.
+    }
+
+    setSelectedPhotoId(layer.id);
+    setDragging({
+      type: 'resize',
+      id: layer.id,
+      startX: event.clientX,
+      startY: event.clientY,
+      originalX: layer.transform.x,
+      originalY: layer.transform.y,
+      originalWidth: layer.transform.width,
     });
   };
 
@@ -1671,16 +2076,18 @@ const handleTextPointerUp = (
 
   const removePhoto = () => {
     revokeIfBlob(photo);
-
-    setPhoto(null);
-
-    setPhotoNaturalSize({
-      width: 1,
-      height: 1,
-    });
+    if (selectedPhotoId !== null) {
+      setPhotoLayers((previous) =>
+        previous.filter((layer) => layer.id !== selectedPhotoId)
+      );
+      const nextLayer = photoLayers.find(
+        (layer) => layer.id !== selectedPhotoId
+      );
+      setSelectedPhotoId(nextLayer?.id ?? null);
+    }
 
     setIsCropping(false);
-    setActiveTool(null);
+    setActiveTool(photoLayers.length > 1 ? 'edit' : null);
   };
 
   const resetEdits = () => {
@@ -1703,10 +2110,11 @@ const handleTextPointerUp = (
 
   const resetAll = () => {
     revokeIfBlob(background);
-    revokeIfBlob(photo);
+    photoLayers.forEach((layer) => revokeIfBlob(layer.src));
 
     setBackground(null);
-    setPhoto(null);
+    setPhotoLayers([]);
+    setSelectedPhotoId(null);
 
     setBackgroundColor(
       '#ffffff'
@@ -1717,10 +2125,6 @@ const handleTextPointerUp = (
     setSelectedWordRange(null);
 
     setNewText('');
-
-    setPhotoTransform({
-      ...DEFAULT_PHOTO_TRANSFORM,
-    });
 
     setAdjustments(
       DEFAULT_ADJUSTMENTS
@@ -1807,11 +2211,12 @@ const handleTextPointerUp = (
     context: CanvasRenderingContext2D,
     image: HTMLImageElement,
     width: number,
-    height: number
+    height: number,
+    layer: PhotoLayer
   ) => {
     const photoWidth =
       width *
-      (photoTransform.width /
+      (layer.transform.width /
         100);
 
     const photoRatio =
@@ -1824,18 +2229,17 @@ const handleTextPointerUp = (
 
     const centerX =
       width *
-      (photoTransform.x /
+      (layer.transform.x /
         100);
 
     const centerY =
       height *
-      (photoTransform.y /
+      (layer.transform.y /
         100);
 
     context.save();
 
-    context.filter =
-      getFilterString();
+    context.filter = getFilterString(layer);
 
     context.translate(
       centerX,
@@ -1843,7 +2247,7 @@ const handleTextPointerUp = (
     );
 
     context.rotate(
-      (photoTransform.rotation *
+      (layer.transform.rotation *
         Math.PI) /
         180
     );
@@ -2229,17 +2633,14 @@ const handleTextPointerUp = (
         }
       }
 
-      if (photo) {
-        const photoImage =
-          await loadImage(
-            photo
-          );
-
+      for (const layer of photoLayers) {
+        const photoImage = await loadImage(layer.src);
         drawPhoto(
           context,
           photoImage,
           outputCanvas.width,
-          outputCanvas.height
+          outputCanvas.height,
+          layer
         );
       }
 
@@ -2467,13 +2868,12 @@ const handleTextPointerUp = (
       return;
     }
 
-    if (
-      tool === 'text' &&
-      selectedTextId === null
-    ) {
+    if (tool === 'text') {
+      setSelectedTextId(null);
+      setEditingTextId(null);
       setNewText('');
       setTextColor(
-        '#ffffff'
+        '#f00000'
       );
       setTextSize(
         DEFAULT_TEXT_SIZE
@@ -2487,6 +2887,9 @@ const handleTextPointerUp = (
       setSelectedWordRange(
         null
       );
+
+      setActiveTool('text');
+      return;
     }
 
     setActiveTool(
@@ -2519,22 +2922,38 @@ const handleTextPointerUp = (
     isCropping &&
     photo
   ) {
+    const maxStageWidth = Math.max(
+      1,
+      Math.min(760, window.innerWidth - 48)
+    );
+    const maxStageHeight = Math.max(
+      1,
+      window.innerHeight - 176
+    );
+    const cropScale = Math.min(
+      maxStageWidth / photoNaturalSize.width,
+      maxStageHeight / photoNaturalSize.height
+    );
     const cropStageStyle:
       CSSProperties = {
         aspectRatio: `${photoNaturalSize.width}/${photoNaturalSize.height}`,
+        width: `${Math.round(photoNaturalSize.width * cropScale)}px`,
+        height: `${Math.round(photoNaturalSize.height * cropScale)}px`,
+        maxWidth: '100%',
+        maxHeight: '100%',
         touchAction: 'none',
       };
 
     return (
       <div className="fixed inset-0 z-[999] flex min-h-dvh flex-col bg-[#161a1f] text-white">
-        <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#20242c] px-3 sm:px-5">
+        <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/15 bg-[#20242c] px-3 sm:px-5">
           <div>
             <h1 className="text-sm font-bold">
               Crop Photo
             </h1>
 
             <p className="text-[10px] text-white/50">
-              Drag crop area or use the corner handles
+              Drag the crop area or any edge to adjust the frame
             </p>
           </div>
 
@@ -2559,7 +2978,7 @@ const handleTextPointerUp = (
             onPointerCancel={
               handlePointerUp
             }
-            className="relative w-full max-w-[760px] overflow-hidden rounded-x bg-black shadow-2xl"
+            className="relative max-w-full overflow-hidden rounded-x bg-black shadow-2xl"
             style={cropStageStyle}>
             <img
               src={photo}
@@ -2605,23 +3024,16 @@ const handleTextPointerUp = (
 
               {(
                 [
-                  [
-                    'nw',
-                    'left-[-8px] top-[-8px]',
-                  ],
-                  [
-                    'ne',
-                    'right-[-8px] top-[-8px]',
-                  ],
-                  [
-                    'sw',
-                    'left-[-8px] bottom-[-8px]',
-                  ],
-                  [
-                    'se',
-                    'right-[-8px] bottom-[-8px]',
-                  ],
-                ] as const
+  ['n', 'left-[-2px] right-[-2px] top-[-2px] h-1 cursor-ns-resize'],
+  ['e', 'right-[-2px] top-[-2px] bottom-[-2px] w-1 cursor-ew-resize'],
+  ['s', 'left-[-2px] right-[-2px] bottom-[-2px] h-1 cursor-ns-resize'],
+  ['w', 'left-[-2px] top-[-2px] bottom-[-2px] w-1 cursor-ew-resize'],
+
+  ['nw', 'left-[-2px] top-[-2px] h-2 w-2 cursor-nwse-resize'],
+  ['ne', 'right-[-2px] top-[-2px] h-2 w-2 cursor-nesw-resize'],
+  ['sw', 'left-[-2px] bottom-[-2px] h-2 w-2 cursor-nesw-resize'],
+  ['se', 'right-[-2px] bottom-[-2px] h-2 w-2 cursor-nwse-resize'],
+] as const
               ).map(
                 ([
                   mode,
@@ -2640,7 +3052,7 @@ const handleTextPointerUp = (
                         mode
                       );
                     }}
-                    className={`absolute ${position} h-4 w-4 touch-none rounded-sm border-2 border-white bg-[#f3ad61] shadow-lg`}
+                    className={`absolute ${position} touch-none rounded-sm border-2 border-white bg-[#ffffff] shadow-lg`}
                     style={{
                       touchAction:
                         'none',
@@ -2695,13 +3107,13 @@ const handleTextPointerUp = (
              </p>
           </div>
         </div>
-          <button type="button" onClick={
+         {/*<button type="button" onClick={
             handleDone
              }
             className="rounded-lg bg-[#737373] px-1 py-0.5 text-xs font-bold text-white transition hover:brightness-110"
             >
             Done
-          </button>
+          </button>*/}
                                 {/* COMPACT DOWNLOAD + RESET */}
 <div
   data-photo-editor-actions
@@ -2709,12 +3121,12 @@ const handleTextPointerUp = (
    <button
      type="button"
      onClick={downloadImage}
-     className={`flex h-8 w-15 items-center justify-center rounded-md px-2 text-[9px] font-black transition ${
+     className={`flex h-8 w-23 items-center justify-center rounded-md px-2 text-[9px] font-black transition ${
       downloadComplete
         ? 'bg-emerald-500 text-black'
         : 'bg-[#f3ad61] text-black'
      }`}>
-     {downloadComplete ? '✓' :  'Save↓'}
+     {downloadComplete ? '✓' :  'Download↓'}
    </button>
 
   <button
@@ -2730,11 +3142,13 @@ const handleTextPointerUp = (
 
       {/* MAIN */}
       <main className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
-        <div className="mx-auto flex min-h-full w-full max-w-[1100px] flex-col px-2 pb-36 pt-2 sm:px-5 sm:pt-5">
+        <div className="mx-auto flex min-h-full w-full max-w-[1100px] flex-col px-2 pb-36 pt-1 sm:px-5 sm:pt-5">
           {/* CANVAS */}
           <div className="flex min-h-[300px] flex-1 items-center justify-center">
             <div
               ref={canvasAreaRef}
+              data-photo-editor-board
+              onClick={handleCanvasClick}
               onPointerMove={
                 handlePointerMove
               }
@@ -2781,200 +3195,85 @@ const handleTextPointerUp = (
                   </div>
                 )}
 
-              {photo && (
-                <div
-                  className="absolute relative"
-                  style={{
-                    left: `${photoTransform.x}%`,
-                    top: `${photoTransform.y}%`,
-                    width: `${photoTransform.width}%`,
-                    transform:
-                      `translate(-50%, -50%) rotate(${photoTransform.rotation}deg)`,
-                    transformOrigin:
-                      'center center',
-                    zIndex: 10,
-                  }}
-                >
-                  <img
-                    src={photo}
-                    alt="Selected"
-                    draggable={false}
-                    onPointerDown={
-                      beginPhotoDrag
-                    }
+              {photoLayers.map((layer, index) => {
+                const selected = selectedPhotoId === layer.id;
+                return (
+                  <div
+                    key={layer.id}
+                    data-photo-layer
+                    className="absolute"
                     style={{
-                      width: '100%',
-                      height: 'auto',
-                      filter:
-                        getFilterString(),
-                      touchAction:
-                        'none',
+                      left: `${layer.transform.x}%`,
+                      top: `${layer.transform.y}%`,
+                      width: `${layer.transform.width}%`,
+                      transform: `translate(-50%, -50%) rotate(${layer.transform.rotation}deg)`,
+                      transformOrigin: 'center center',
+                      zIndex: selected ? 20 : 10 + index,
                     }}
-                    className="block cursor-move select-none rounded-sm"/>
-
-          {!isCropping && (
-          <button type="button"
-            onPointerDown={(event) => {event.preventDefault();event.stopPropagation();}}
-            onClick={() => setPhoto(null)}
-            className="absolute left-[-10px] top-[-10px] z-30 flex h-6.5 w-6 items-center justify-center rounded-sm bg-gray-300 text-lg font-bold leading-none text-white shadow-lg">
-            ×
-          </button>
-        )}
-
-                  <div className="pointer-events-none absolute inset-0 rounded-sm border-2 border-dashed border-[#f3ad61]" />
-
-                  <button
-                    type="button"
-                    onPointerDown={(
-                      event
-                    ) => {
-                      event.stopPropagation();
-                      event.preventDefault();
-                    }}
-                    onClick={() =>
-                      rotatePhoto(
-                        90
-                      )
-                    }
-                    className="absolute -right-3 -top-3 flex h-7 w-7 items-center justify-center rounded-full border-2 border-[#20242c] bg-[#f3ad61] text-xs font-black text-black shadow"
                   >
-                    ↻
-                  </button>
-                </div>
-              )}
+                    <img
+                      src={layer.src}
+                      alt={`Photo layer ${index + 1}`}
+                      draggable={false}
+                      onPointerDown={(event) => beginPhotoDrag(event, layer)}
+                      onDoubleClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setSelectedPhotoId(layer.id);
+                        setActiveTool('edit');
+                      }}
+                      style={{
+                        width: '100%',
+                        height: 'auto',
+                        filter: getFilterString(layer),
+                        touchAction: 'none',
+                      }}
+                      className="block cursor-move select-none rounded-sm"
+                    />
+
+                    {selected && !isCropping && (
+                      <>
+                        <div className="pointer-events-none absolute inset-0 rounded-sm border-2 border-double border-[#dc2626]" />
+                        <button
+                          type="button"
+                          onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+                          onClick={removePhoto}
+                          className="absolute -left-3 -top-3 z-30 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-lg font-bold leading-none text-white shadow-lg"
+                          aria-label="Remove selected photo"
+                        >
+                          ×
+                        </button>
+                        <button
+                          type="button"
+                          onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
+                          onClick={() => rotatePhoto(90)}
+                          className="absolute -right-3 -top-3 z-30 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#d1d5db] bg-[#b0b0b0] text-xs font-black text-white shadow"
+                          aria-label="Rotate selected photo"
+                        >
+                          ↻
+                        </button>
+                        <button
+                          type="button"
+                          onPointerDown={(event) => beginPhotoResize(event, layer)}
+                          className="absolute -bottom-3 -right-3 z-30 h-5 w-5 touch-none rounded-sm border-2 border-[#6b7280] bg-[#b0b0b0] shadow"
+                          style={{ touchAction: 'none' }}
+                          aria-label="Resize selected photo"
+                        />
+                      </>
+                    )}
+                  </div>
+                );
+              })}
  
                                        {/* T-all */}
  {textLayers.map((layer) => (
   <div
     key={layer.id}
-    onPointerDown={(event) => {
-      const el =
-        event.currentTarget as HTMLDivElement & {
-          __startX?: number;
-          __startY?: number;
-          __startLayerX?: number;
-          __startLayerY?: number;
-        };
-
-      event.preventDefault();
-      event.stopPropagation();
-
-      setSelectedTextId(layer.id);
-
-      el.__startX = event.clientX;
-      el.__startY = event.clientY;
-
-      el.__startLayerX = layer.x;
-      el.__startLayerY = layer.y;
-
-      try {
-        el.setPointerCapture(event.pointerId);
-      } catch {}
-    }}
-
-    onPointerMove={(event) => {
-      const el =
-        event.currentTarget as HTMLDivElement & {
-          __startX?: number;
-          __startY?: number;
-          __startLayerX?: number;
-          __startLayerY?: number;
-        };
-
-      if (
-        el.__startX === undefined ||
-        el.__startY === undefined ||
-        el.__startLayerX === undefined ||
-        el.__startLayerY === undefined
-      ) {
-        return;
-      }
-
-      const parent = el.parentElement;
-
-      if (!parent) return;
-
-      const rect =
-        parent.getBoundingClientRect();
-
-      if (
-        rect.width <= 0 ||
-        rect.height <= 0
-      ) {
-        return;
-      }
-
-      const dx =
-        event.clientX - el.__startX;
-
-      const dy =
-        event.clientY - el.__startY;
-
-      const dxPercent =
-        (dx / rect.width) * 100;
-
-      const dyPercent =
-        (dy / rect.height) * 100;
-
-      const newX = Math.max(
-        0,
-        Math.min(
-          100,
-          el.__startLayerX + dxPercent
-        )
-      );
-
-      const newY = Math.max(
-        0,
-        Math.min(
-          100,
-          el.__startLayerY + dyPercent
-        )
-      );
-
-      updateSelectedText({
-        x: newX,
-        y: newY,
-      });
-    }}
-
-    onPointerUp={(event) => {
-      const el =
-        event.currentTarget as HTMLDivElement & {
-          __startX?: number;
-          __startY?: number;
-          __startLayerX?: number;
-          __startLayerY?: number;
-        };
-
-      try {
-        el.releasePointerCapture(event.pointerId);
-      } catch {}
-
-      el.__startX = undefined;
-      el.__startY = undefined;
-      el.__startLayerX = undefined;
-      el.__startLayerY = undefined;
-    }}
-
-    onPointerCancel={(event) => {
-      const el =
-        event.currentTarget as HTMLDivElement & {
-          __startX?: number;
-          __startY?: number;
-          __startLayerX?: number;
-          __startLayerY?: number;
-        };
-
-      try {
-        el.releasePointerCapture(event.pointerId);
-      } catch {}
-
-      el.__startX = undefined;
-      el.__startY = undefined;
-      el.__startLayerX = undefined;
-      el.__startLayerY = undefined;
-    }}
+    data-text-layer
+    onPointerDown={(event) => handleTextPointerDown(event, layer)}
+    onPointerMove={(event) => handleTextPointerMove(event, layer)}
+    onPointerUp={(event) => handleTextPointerUp(event, layer)}
+    onPointerCancel={(event) => handleTextPointerUp(event, layer)}
 
     onDoubleClick={() => {
       setSelectedTextId(layer.id);
@@ -2993,6 +3292,8 @@ const handleTextPointerUp = (
     style={{
       left: `${layer.x}%`,
       top: `${layer.y}%`,
+      width: 'max-content',
+      maxWidth: '90%',
 
       transform:
         'translate(-50%, -50%)',
@@ -3359,16 +3660,16 @@ const handleTextPointerUp = (
     className={`${overlayPanelClass} w-[min(94vw,620px)] max-h-[52vh] overflow-y-auto p-2`}
   >
     {/* HEADER */}
-    <div className="mb-2 flex items-center justify-between">
-      <div>
-        <h2 className="text-xs font-bold">
-          {selectedText ? 'Edit Text' : 'Add Text'}
-        </h2>
+    <div className="mb-0 flex items-center justify-between">
+    {/*<div className="flex flex-row items-center gap-7">
+    <h2 className="text-xs font-bold">
+    {selectedText ? 'Edit Text' : 'Add Text'}
+    </h2>
 
-        <p className="text-[9px] text-white/40">
-          Select any word or sentence to change its color
-        </p>
-      </div>
+    <p className="text-[8px] text-white/60 whitespace-nowrap">
+    Select any word or sentence to change its color
+  </p>
+</div>*/}
 
       {selectedText && (
         <button
@@ -3514,7 +3815,7 @@ const handleTextPointerUp = (
     <div className="mt-2 grid grid-cols-2 gap-2">
 
       <div>
-        <label className="mb-1 block text-[9px] text-white/50">
+        <label className="mb-1 block text-[9px] text-white/70">
           Font
         </label>
 
@@ -3546,7 +3847,7 @@ const handleTextPointerUp = (
       </div>
 
       <div>
-        <label className="mb-1 block text-[9px] text-white/50">
+        <label className="mb-1 block text-[9px] text-white/70">
           Full Text Color
         </label>
 
@@ -3569,12 +3870,11 @@ const handleTextPointerUp = (
 
               setTextColor(value);
             }}
-            className="h-6 w-8 cursor-pointer border-0 bg-transparent"
-          />
+            className="h-6 w-8 cursor-pointer border-0 bg-transparent"/>
 
-          <span className="text-[9px] text-white/70">
+           <span className="text-[9px] text-white/70">
             All
-          </span>
+           </span>
         </div>
       </div>
     </div>
@@ -3589,7 +3889,7 @@ const handleTextPointerUp = (
           Selected Word / Sentence
         </span>
 
-        <span className="text-[8px] text-white/30">
+        <span className="text-[8px] text-white/40">
           {selectedWordRange
             ? `${selectedWordRange.end - selectedWordRange.start} chars`
             : 'Select text first'}
@@ -3685,15 +3985,14 @@ const handleTextPointerUp = (
       </div>
     </div>
 
-    {/* ADD / DONE */}
+    {/* ADD / DONE *
     <div className="mt-2 flex gap-2">
 
       {!selectedText ? (
         <button
           type="button"
-          onClick={addText}
-          className="h-8 flex-1 rounded-lg bg-[#f3ad61] text-[10px] font-black text-black"
-        >
+          onClick={() => addText()}
+          className="h-8 flex-1 rounded-lg bg-[#f3ad61] text-[10px] font-black text-black">
           + Add Text
         </button>
       ) : (
@@ -3711,7 +4010,7 @@ const handleTextPointerUp = (
           Done
         </button>
       )}
-    </div>
+    </div>*/}
   </section>
 )}
                         {/* Text Ending */}
@@ -3992,7 +4291,7 @@ const handleTextPointerUp = (
        <footer
         data-photo-editor-toolbar
         className="fixed bottom-0 left-0 right-0 z-[200] border-t border-white/10 bg-[#20242c]/98 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.25)] backdrop-blur">
-        <div className="mx-auto flex max-w-[1100px] items-center gap-3 overflow-x-auto px-1 py-1.5 sm:justify-center sm:gap-2">
+        <div className="mx-auto flex max-w-[1100px] items-center gap-3 overflow-x-auto px-1 py-1 sm:justify-center sm:gap-2">
           {/* BACKGROUND */}
           <button
             type="button"
@@ -4163,6 +4462,7 @@ const handleTextPointerUp = (
         }
         type="file"
         accept="image/*"
+        multiple
         onChange={
           selectPhoto
         }
