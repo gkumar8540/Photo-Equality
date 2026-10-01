@@ -354,6 +354,21 @@ function PhotoEditor() {
 
   const handleFileInput = (event: ChangeEvent<HTMLInputElement>) => loadFile(event.target.files?.[0]);
 
+  const removeSelectedImage = () => {
+    setSourceUrl(null);
+    setFileName('');
+    setFileSize(0);
+    setDimensions({ width: 0, height: 0 });
+    setControls(defaultControls);
+    setRotation(0);
+    setCropMode(false);
+    setCropRect(null);
+    setAppliedCrop(null);
+    setExportMessage('');
+    setDownloadComplete(false);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
   const rotate = (direction: 'left' | 'right') => {
     setRotation((current) => (current + (direction === 'right' ? 90 : 270)) % 360);
   };
@@ -627,7 +642,7 @@ function PhotoEditor() {
             onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
             data-testid="drop-zone">
             {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[59vh] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-sm border border-[#db2777] bg-[#ffffff] px-1 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors sm:min-h-[400px] sm:px-7 ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
+              <div className={`drop-zone relative flex min-h-[61vh] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-sm border border-[#db2777] bg-[#ffffff] px-1 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors sm:min-h-[400px] sm:px-7 ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
                 <EmptyArtwork />
                 <div className="relative z-10 animate-rise-in">
                   <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
@@ -645,6 +660,20 @@ function PhotoEditor() {
               <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
                 <div className="checkerboard relative flex min-h-[68vh] w-full items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
                   <div className="relative block h-auto max-h-[calc(100dvh-130px)] max-w-full">
+                    {!cropMode && (
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          removeSelectedImage();
+                        }}
+                        className="absolute left-0 top-0 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-[#808080]/85 text-xl font-bold leading-none text-white shadow-lg hover:bg-red-600"
+                        aria-label="Remove selected image"
+                        data-testid="button-remove-image"
+                      >
+                        ×
+                      </button>
+                    )}
                     <canvas ref={canvasRef} className="block h-auto max-h-[calc(100dvh-230px)] max-w-full rounded-0 object-contain" style={{ imageRendering: 'auto', maxHeight: window.innerWidth < 768 ? 'calc(100dvh - 300px)' : 'calc(100dvh - 230px)' }} data-testid="canvas-preview" />
                     {cropMode && (
                       <div
