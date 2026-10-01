@@ -612,7 +612,7 @@ function PhotoEditor() {
         </div>
       </header>
 
-    <div className="mx-auto grid min-h-[65vh] max-w-[1640px] grid-cols-1 bg-[#111419] md:min-h-[calc(88dvh-72px)]">
+    <div className="mx-auto grid min-h-[75vh] max-w-[1640px] grid-cols-1 bg-[#111419] md:min-h-[calc(88dvh-72px)]">
         <section className="studio-grid mobile-preview flex min-h-fit flex-col bg-[#294169]">
           <div className="flex items-center justify-between border-b border-[#4271ff] px-4 py-0.5 sm:px-6">
             <div className="flex items-center gap-2">
@@ -643,7 +643,7 @@ function PhotoEditor() {
               </div>
             ) : (
               <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
-                <div className="checkerboard relative flex min-h-[58vh] w-full items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
+                <div className="checkerboard relative flex min-h-[68vh] w-full items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
                   <div className="relative block h-auto max-h-[calc(100dvh-130px)] max-w-full">
                     <canvas ref={canvasRef} className="block h-auto max-h-[calc(100dvh-230px)] max-w-full rounded-0 object-contain" style={{ imageRendering: 'auto', maxHeight: window.innerWidth < 768 ? 'calc(100dvh - 300px)' : 'calc(100dvh - 230px)' }} data-testid="canvas-preview" />
                     {cropMode && (
