@@ -3754,9 +3754,9 @@ const handleTextPointerUp = (
     data-photo-editor-panel
     className={`${overlayPanelClass} w-[min(94vw,620px)] max-h-[52vh] overflow-y-auto p-2`}
     style={{
-      bottom: keyboardHeight > 0 ? `${keyboardHeight + 12}px` : '87px',
+      bottom: keyboardHeight > 0 ? '12px' : '87px',
       maxHeight: keyboardHeight > 0
-        ? `calc(100dvh - ${keyboardHeight}px - 24px)`
+        ? 'calc(100dvh - 24px)'
         : '52vh',
     }}
   >
