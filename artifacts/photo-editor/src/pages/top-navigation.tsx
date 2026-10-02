@@ -111,6 +111,8 @@ const SIZE_PRESETS = [
   { id: '3:2', label: '3:2', width: 1620, height: 1080 },
 ];
 
+const TEXT_REFERENCE_WIDTH = SIZE_PRESETS[0].width;
+
 const FILTER_PRESETS: {
   id: FilterPreset;
   label: string;
@@ -267,6 +269,8 @@ const getPinchDistance = (
 
   const [selectedPhotoId, setSelectedPhotoId] =
     useState<number | null>(null);
+  const [showPhotoSelection, setShowPhotoSelection] =
+    useState(true);
 
   const [backgroundColor, setBackgroundColor] =
     useState('#ffffff');
@@ -282,6 +286,8 @@ const getPinchDistance = (
 
   const [selectedTextId, setSelectedTextId] =
     useState<number | null>(null);
+  const [showTextSelection, setShowTextSelection] =
+    useState(true);
 const [editingTextId, setEditingTextId] =
   useState<number | null>(null);
   const textPointersRef = useRef<
@@ -464,6 +470,7 @@ const textPinchRef = useRef<{
         (layer) => layer.id !== selectedPhotoId
       );
       setSelectedPhotoId(nextLayer?.id ?? null);
+      setShowPhotoSelection(true);
       return;
     }
 
@@ -583,9 +590,11 @@ const textPinchRef = useRef<{
 
       const clickedBoard = target.closest('[data-photo-editor-board]');
       const clickedPhoto = target.closest('[data-photo-layer]');
+      const clickedText = target.closest('[data-text-layer]');
       if (
         clickedBoard &&
         (clickedPhoto ||
+          clickedText ||
           (activeTool === 'text' && selectedTextId === null && newText.trim()))
       ) {
         return;
@@ -686,6 +695,7 @@ const textPinchRef = useRef<{
 
       setPhotoLayers((previous) => [...previous, ...nextLayers]);
       setSelectedPhotoId(nextLayers[nextLayers.length - 1].id);
+      setShowPhotoSelection(true);
 
       /*
        * Start crop exactly from image edges.
@@ -1360,11 +1370,13 @@ const textPinchRef = useRef<{
 
     if (closeAfterAdd) {
       setSelectedTextId(null);
+      setShowTextSelection(true);
       setEditingTextId(null);
       setNewText('');
       setActiveTool(null);
     } else {
       setSelectedTextId(id);
+      setShowTextSelection(true);
       setNewText(value);
       setActiveTool('text');
     }
@@ -1446,7 +1458,14 @@ const textPinchRef = useRef<{
       }
 
       textGestureLayerIdRef.current = layer.id;
-      setSelectedTextId(layer.id);
+      if (textPointersRef.current.size === 0) {
+        if (selectedTextId === layer.id) {
+          setShowTextSelection((visible) => !visible);
+        } else {
+          setSelectedTextId(layer.id);
+          setShowTextSelection(true);
+        }
+      }
       textPointersRef.current.set(event.pointerId, {
         x: event.clientX,
         y: event.clientY,
@@ -1858,7 +1877,12 @@ const textPinchRef = useRef<{
       // Ignore pointer capture errors.
     }
 
-    setSelectedPhotoId(layer.id);
+    if (selectedPhotoId === layer.id) {
+      setShowPhotoSelection((visible) => !visible);
+    } else {
+      setSelectedPhotoId(layer.id);
+      setShowPhotoSelection(true);
+    }
     setDragging({
       type: 'photo',
       id: layer.id,
@@ -2084,6 +2108,7 @@ const handleTextPointerUp = (
         (layer) => layer.id !== selectedPhotoId
       );
       setSelectedPhotoId(nextLayer?.id ?? null);
+      setShowPhotoSelection(true);
     }
 
     setIsCropping(false);
@@ -2278,11 +2303,8 @@ const handleTextPointerUp = (
       (layer.y / 100);
 
     const fontSize =
-      Math.max(
-        10,
-        layer.fontSize *
-          (width / 1080)
-      );
+      layer.fontSize *
+      (width / TEXT_REFERENCE_WIDTH);
 
     const lines =
       layer.text.split('\n');
@@ -3162,6 +3184,7 @@ const handleTextPointerUp = (
               style={{
                 aspectRatio:
                   currentAspectRatio,
+                containerType: 'inline-size',
                 backgroundColor,
                 touchAction:
                   'none',
@@ -3220,6 +3243,7 @@ const handleTextPointerUp = (
                         event.preventDefault();
                         event.stopPropagation();
                         setSelectedPhotoId(layer.id);
+                        setShowPhotoSelection(true);
                         setActiveTool('edit');
                       }}
                       style={{
@@ -3231,7 +3255,7 @@ const handleTextPointerUp = (
                       className="block cursor-move select-none rounded-sm"
                     />
 
-                    {selected && !isCropping && (
+                    {selected && showPhotoSelection && !isCropping && (
                       <>
                         <div className="pointer-events-none absolute inset-0 rounded-sm border-2 border-double border-[#dc2626]" />
                         <button
@@ -3277,6 +3301,7 @@ const handleTextPointerUp = (
 
     onDoubleClick={() => {
       setSelectedTextId(layer.id);
+      setShowTextSelection(true);
 
       setNewText(layer.text);
 
@@ -3284,7 +3309,7 @@ const handleTextPointerUp = (
     }}
 
     className={`absolute max-w-[90%] cursor-move select-none whitespace-pre-wrap break-words px-2 py-1 ${
-      selectedTextId === layer.id
+      selectedTextId === layer.id && showTextSelection
         ? 'ring-2 ring-[#f3ad61] ring-offset-2 ring-offset-transparent'
         : ''
     }`}
@@ -3301,13 +3326,7 @@ const handleTextPointerUp = (
       fontFamily:
         layer.fontFamily,
 
-      fontSize: `${Math.max(
-        10,
-        layer.fontSize *
-          (window.innerWidth < 600
-            ? 0.65
-            : 1)
-      )}px`,
+      fontSize: `${(layer.fontSize / TEXT_REFERENCE_WIDTH) * 100}cqw`,
 
       fontWeight:
         layer.bold
@@ -3439,7 +3458,7 @@ const handleTextPointerUp = (
     })()}
 
     {/* DELETE BUTTON */}
-    {selectedTextId === layer.id && (
+    {selectedTextId === layer.id && showTextSelection && (
       <button
         type="button"
         onPointerDown={(event) => {

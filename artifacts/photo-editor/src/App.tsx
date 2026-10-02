@@ -164,11 +164,13 @@ function AdjustmentRow({
   );
 }
 
-function PhotoEditor() {
+function PhotoEquality() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
+
+
   const [fileName, setFileName] = useState('');
   const [fileSize, setFileSize] = useState(0);
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
@@ -658,7 +660,7 @@ function PhotoEditor() {
               </div>
             ) : (
               <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
-                <div className="checkerboard relative flex min-h-[68vh] w-full items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
+                <div className="checkerboard relative flex min-h-[68vh] w-full mb-4 items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
                   <div className="relative block h-auto max-h-[calc(100dvh-130px)] max-w-full">
                     {!cropMode && (
                       <button
@@ -1049,7 +1051,7 @@ function App() {
   return (
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Switch>
-        <Route path="/" component={PhotoEditor} />
+        <Route path="/" component={PhotoEquality} />
         <Route path="/nav/mixer" component={TopNavigationPage} />
         <Route path="/nav/top" component={TopNavigationPage} />
         <Route path="/nav/sidebar" component={OldFuturePage} />

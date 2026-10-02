@@ -1676,7 +1676,7 @@ export default function OldFuturePage() {
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div className="sticky bottom-2 z-20 mt-3 rounded-xl border border-white/10 bg-[#20242c]/95 p-2 shadow-2xl backdrop-blur">
+        <div className="fixed bottom-0 w-87 left-1/2 z-20 -translate-x-1/2 rounded-0 border border-white/10 bg-[#20242c]/95 p-1 shadow-2xl backdrop-blur">
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             <button
               onClick={resetAll}
