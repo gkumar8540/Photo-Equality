@@ -6,6 +6,8 @@ import {
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
 } from 'react';
+import { Capacitor } from '@capacitor/core';
+import { Keyboard } from '@capacitor/keyboard';
 
 declare global {
   interface Window {
@@ -277,6 +279,41 @@ const getPinchDistance = (
 
   const [activeTool, setActiveTool] =
     useState<Tool>(null);
+  const [keyboardHeight, setKeyboardHeight] =
+    useState(0);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+
+    let isActive = true;
+    let removeListeners: (() => void) | undefined;
+
+    void Promise.all([
+      Keyboard.addListener('keyboardWillShow', ({ keyboardHeight: height }) => {
+        setKeyboardHeight(height);
+      }),
+      Keyboard.addListener('keyboardWillHide', () => {
+        setKeyboardHeight(0);
+      }),
+    ]).then((listeners) => {
+      const remove = () => {
+        listeners.forEach((listener) => {
+          void listener.remove();
+        });
+      };
+
+      if (isActive) {
+        removeListeners = remove;
+      } else {
+        remove();
+      }
+    });
+
+    return () => {
+      isActive = false;
+      removeListeners?.();
+    };
+  }, []);
 
   const [canvasSize, setCanvasSize] =
     useState(SIZE_PRESETS[4]);
@@ -2932,7 +2969,7 @@ const handleTextPointerUp = (
    * They no longer push the editor/export area.
    */
   const overlayPanelClass =
-  'fixed left-2 right-2 bottom-[87px] z-[9999] mx-auto w-auto max-w-[760px] max-h-[70vh] overflow-y-auto rounded-xl border border-white/10 bg-[#20242c] p-3 shadow-2xl';
+   'fixed left-2 right-2 bottom-[87px] z-[9999] mx-auto w-auto max-w-[760px] max-h-[70vh] overflow-y-auto rounded-xl border border-white/10 bg-[#20242c] p-3 shadow-2xl';
   /*
    * Compact action bar stays above footer.
    * It remains visible even while a popup is open.
@@ -3055,7 +3092,7 @@ const handleTextPointerUp = (
   ['ne', 'right-[-2px] top-[-2px] h-2 w-2 cursor-nesw-resize'],
   ['sw', 'left-[-2px] bottom-[-2px] h-2 w-2 cursor-nesw-resize'],
   ['se', 'right-[-2px] bottom-[-2px] h-2 w-2 cursor-nwse-resize'],
-] as const
+  ] as const
               ).map(
                 ([
                   mode,
@@ -3122,7 +3159,7 @@ const handleTextPointerUp = (
 
           <div className="min-w-0">
             <h1 className="truncate text-sm font-bold sm:text-base">
-              Photo-Equality
+              Mixer
             </h1>
              <p className="hidden text-[9px] text-white/40 sm:block">
               Photo Editing Studio
@@ -3252,7 +3289,7 @@ const handleTextPointerUp = (
                         filter: getFilterString(layer),
                         touchAction: 'none',
                       }}
-                      className="block cursor-move select-none rounded-sm"
+                      className="block cursor-move select-none rounded-0"
                     />
 
                     {selected && showPhotoSelection && !isCropping && (
@@ -3276,13 +3313,15 @@ const handleTextPointerUp = (
                         >
                           ↻
                         </button>
+
                         <button
-                          type="button"
-                          onPointerDown={(event) => beginPhotoResize(event, layer)}
-                          className="absolute -bottom-3 -right-3 z-30 h-5 w-5 touch-none rounded-sm border-2 border-[#6b7280] bg-[#b0b0b0] shadow"
+                          type="button"onPointerDown={(event) => beginPhotoResize(event, layer)}
+                          className="absolute -bottom-3 -right-3 z-30 flex h-5 w-5  touch-none items-center justify-center rounded-sm border-2 border-[#6b7280] bg-[#b0b0b0] text-xs font-bold leading-none text-black shadow"
                           style={{ touchAction: 'none' }}
                           aria-label="Resize selected photo"
-                        />
+                          >
+                          ↔
+                       </button>
                       </>
                     )}
                   </div>
@@ -3459,22 +3498,59 @@ const handleTextPointerUp = (
 
     {/* DELETE BUTTON */}
     {selectedTextId === layer.id && showTextSelection && (
-      <button
-        type="button"
-        onPointerDown={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-        }}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-
-          deleteSelectedText();
-        }}
-        className="absolute -right-4 -top-4 flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-sm font-black text-white shadow-lg"
-      >
-        ×
-      </button>
+      <>
+        <button
+          type="button"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            updateSelectedText({
+              fontSize: clamp(layer.fontSize + 4, 12, 160),
+            });
+          }}
+          className="absolute -left-4 -top-4 flex h-5 w-5 items-center justify-center rounded-full bg-[#f3ad61] text-lg font-bold leading-none text-black shadow-lg"
+          aria-label="Increase text size"
+        >
+          +
+        </button>
+        <button
+          type="button"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            updateSelectedText({
+              fontSize: clamp(layer.fontSize - 4, 12, 160),
+            });
+          }}
+          className="absolute -bottom-4 -left-4 flex h-5 w-5 items-center justify-center rounded-full bg-[#2b3238] text-lg font-bold leading-none text-white shadow-lg"
+          aria-label="Decrease text size">
+          −
+        </button>
+        <button
+          type="button"
+          onPointerDown={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+          }}
+          onClick={(event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            deleteSelectedText();
+          }}
+          className="absolute -right-4 -top-4 flex h-5 w-6 items-center justify-center rounded-full bg-red-500 text-sm font-black text-white shadow-lg"
+          aria-label="Delete selected text"
+        >
+          ×
+        </button>
+      </>
     )}
   </div>
 ))}
@@ -3677,6 +3753,12 @@ const handleTextPointerUp = (
   <section
     data-photo-editor-panel
     className={`${overlayPanelClass} w-[min(94vw,620px)] max-h-[52vh] overflow-y-auto p-2`}
+    style={{
+      bottom: keyboardHeight > 0 ? `${keyboardHeight + 12}px` : '87px',
+      maxHeight: keyboardHeight > 0
+        ? `calc(100dvh - ${keyboardHeight}px - 24px)`
+        : '52vh',
+    }}
   >
     {/* HEADER */}
     <div className="mb-0 flex items-center justify-between">
@@ -3690,15 +3772,7 @@ const handleTextPointerUp = (
   </p>
 </div>*/}
 
-      {selectedText && (
-        <button
-          type="button"
-          onClick={deleteSelectedText}
-          className="rounded-md bg-red-500/15 px-2 py-1 text-[10px] font-bold text-red-300"
-        >
-          Delete
-        </button>
-      )}
+      
     </div>
 
     {/* TEXT */}
@@ -4310,7 +4384,7 @@ const handleTextPointerUp = (
        <footer
         data-photo-editor-toolbar
         className="fixed bottom-0 left-0 right-0 z-[200] border-t border-white/10 bg-[#20242c]/98 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.25)] backdrop-blur">
-        <div className="mx-auto flex max-w-[1100px] items-center gap-3 overflow-x-auto px-1 py-1 sm:justify-center sm:gap-2">
+        <div className="mx-auto flex max-w-[1100px] items-center gap-3 overflow-x-auto px-1 py-0 sm:justify-center sm:gap-2">
           {/* BACKGROUND */}
           <button
             type="button"
