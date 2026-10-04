@@ -1702,10 +1702,16 @@ export default function OldFuturePage() {
             <button
               onClick={downloadImage}
               disabled={exporting}
-              className="min-h-11 rounded-lg bg-[#f3ad61] px-2 text-xs font-bold text-black transition hover:brightness-110 disabled:opacity-50 sm:col-auto"
+              aria-busy={exporting}
+              className="flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#f3ad61] px-2 text-xs font-bold text-black transition hover:brightness-110 disabled:opacity-50 sm:col-auto"
             >
               {exporting
-                ? "Exporting..."
+                ? (
+                  <>
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+                    Exporting...
+                  </>
+                )
                 : "Download"}
             </button>
           </div>

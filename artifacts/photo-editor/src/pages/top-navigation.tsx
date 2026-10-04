@@ -101,6 +101,8 @@ type PhotoLayer = {
   transform: PhotoTransform;
   adjustments: Adjustments;
   filterPreset: FilterPreset;
+  cornerRoundness: number;
+  edgeFeather: number;
 };
 
 const SIZE_PRESETS = [
@@ -273,6 +275,8 @@ const getPinchDistance = (
     useState<number | null>(null);
   const [showPhotoSelection, setShowPhotoSelection] =
     useState(true);
+  const [showCornerRoundingControl, setShowCornerRoundingControl] =
+    useState(false);
 
   const [backgroundColor, setBackgroundColor] =
     useState('#ffffff');
@@ -320,6 +324,8 @@ const getPinchDistance = (
 
   const [textLayers, setTextLayers] =
     useState<TextLayer[]>([]);
+  const [alignedTextGuideX, setAlignedTextGuideX] =
+    useState<number | null>(null);
 
   const [selectedTextId, setSelectedTextId] =
     useState<number | null>(null);
@@ -446,6 +452,7 @@ const textPinchRef = useRef<{
 
   const [downloadComplete, setDownloadComplete] =
     useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const [exportMessage, setExportMessage] =
     useState('');
@@ -717,6 +724,8 @@ const textPinchRef = useRef<{
               },
               adjustments: { ...DEFAULT_ADJUSTMENTS },
               filterPreset: 'original',
+              cornerRoundness: 0,
+              edgeFeather: 0,
             };
             return layer;
           } catch {
@@ -733,6 +742,7 @@ const textPinchRef = useRef<{
       setPhotoLayers((previous) => [...previous, ...nextLayers]);
       setSelectedPhotoId(nextLayers[nextLayers.length - 1].id);
       setShowPhotoSelection(true);
+      setShowCornerRoundingControl(false);
 
       /*
        * Start crop exactly from image edges.
@@ -1515,6 +1525,7 @@ const textPinchRef = useRef<{
       }
 
       if (textPointersRef.current.size >= 2) {
+        setAlignedTextGuideX(null);
         textPinchRef.current = {
           active: true,
           startDistance: getTextPointerDistance(),
@@ -1598,10 +1609,18 @@ const textPinchRef = useRef<{
         100
       );
 
+      const alignmentTarget = textLayers.find(
+        (item) =>
+          item.id !== drag.layerId &&
+          Math.abs(item.x - x) <= (8 / rect.width) * 100
+      );
+      const nextX = alignmentTarget?.x ?? x;
+      setAlignedTextGuideX(alignmentTarget?.x ?? null);
+
       setTextLayers((previous) =>
         previous.map((item) =>
           item.id === drag.layerId
-            ? { ...item, x, y }
+            ? { ...item, x: nextX, y }
             : item
         )
       );
@@ -1623,6 +1642,7 @@ const textPinchRef = useRef<{
         textGestureLayerIdRef.current = null;
         textDragRef.current = null;
         textPinchRef.current.active = false;
+        setAlignedTextGuideX(null);
         return;
       }
 
@@ -1920,6 +1940,7 @@ const textPinchRef = useRef<{
       setSelectedPhotoId(layer.id);
       setShowPhotoSelection(true);
     }
+    setShowCornerRoundingControl(true);
     setDragging({
       type: 'photo',
       id: layer.id,
@@ -2161,6 +2182,14 @@ const handleTextPointerUp = (
       'original'
     );
 
+    if (selectedPhotoId !== null) {
+      updatePhotoLayer(selectedPhotoId, (layer) => ({
+        ...layer,
+        cornerRoundness: 0,
+        edgeFeather: 0,
+      }));
+    }
+
     setPhotoTransform({
       ...DEFAULT_PHOTO_TRANSFORM,
     });
@@ -2177,6 +2206,7 @@ const handleTextPointerUp = (
     setBackground(null);
     setPhotoLayers([]);
     setSelectedPhotoId(null);
+    setShowCornerRoundingControl(false);
 
     setBackgroundColor(
       '#ffffff'
@@ -2300,9 +2330,6 @@ const handleTextPointerUp = (
         100);
 
     context.save();
-
-    context.filter = getFilterString(layer);
-
     context.translate(
       centerX,
       centerY
@@ -2314,13 +2341,93 @@ const handleTextPointerUp = (
         180
     );
 
-    context.drawImage(
-      image,
-      -photoWidth / 2,
-      -photoHeight / 2,
-      photoWidth,
-      photoHeight
-    );
+    const cornerRadius =
+      (Math.min(photoWidth, photoHeight) *
+        clamp(layer.cornerRoundness, 0, 100)) /
+      200;
+    if (cornerRadius > 0) {
+      const left = -photoWidth / 2;
+      const top = -photoHeight / 2;
+      const right = photoWidth / 2;
+      const bottom = photoHeight / 2;
+      context.beginPath();
+      context.moveTo(left + cornerRadius, top);
+      context.lineTo(right - cornerRadius, top);
+      context.arcTo(right, top, right, top + cornerRadius, cornerRadius);
+      context.lineTo(right, bottom - cornerRadius);
+      context.arcTo(right, bottom, right - cornerRadius, bottom, cornerRadius);
+      context.lineTo(left + cornerRadius, bottom);
+      context.arcTo(left, bottom, left, bottom - cornerRadius, cornerRadius);
+      context.lineTo(left, top + cornerRadius);
+      context.arcTo(left, top, left + cornerRadius, top, cornerRadius);
+      context.closePath();
+      context.clip();
+    }
+
+    if (layer.edgeFeather === 0) {
+      context.filter = getFilterString(layer);
+      context.drawImage(
+        image,
+        -photoWidth / 2,
+        -photoHeight / 2,
+        photoWidth,
+        photoHeight
+      );
+    } else {
+      const featherCanvas = document.createElement('canvas');
+      featherCanvas.width = Math.max(1, Math.ceil(photoWidth));
+      featherCanvas.height = Math.max(1, Math.ceil(photoHeight));
+      const featherContext = featherCanvas.getContext('2d');
+      if (!featherContext) {
+        context.restore();
+        throw new Error('Unable to apply edge feather to photo.');
+      }
+
+      featherContext.filter = getFilterString(layer);
+      featherContext.drawImage(
+        image,
+        0,
+        0,
+        featherCanvas.width,
+        featherCanvas.height
+      );
+      const imageData = featherContext.getImageData(
+        0,
+        0,
+        featherCanvas.width,
+        featherCanvas.height
+      );
+      const pixels = imageData.data;
+      const featherPixels =
+        (Math.min(featherCanvas.width, featherCanvas.height) *
+          0.2 *
+          clamp(layer.edgeFeather, 0, 100)) /
+        100;
+
+      for (let y = 0; y < featherCanvas.height; y += 1) {
+        for (let x = 0; x < featherCanvas.width; x += 1) {
+          const distanceToEdge = Math.min(
+            x,
+            y,
+            featherCanvas.width - 1 - x,
+            featherCanvas.height - 1 - y
+          );
+          const alpha = Math.min(1, distanceToEdge / featherPixels);
+          const alphaIndex = (y * featherCanvas.width + x) * 4 + 3;
+          pixels[alphaIndex] *= alpha;
+        }
+      }
+
+      featherContext.putImageData(imageData, 0, 0);
+      context.filter = 'none';
+      context.drawImage(
+        featherCanvas,
+        -photoWidth / 2,
+        -photoHeight / 2,
+        photoWidth,
+        photoHeight
+      );
+    }
 
     context.restore();
   };
@@ -2329,8 +2436,45 @@ const handleTextPointerUp = (
     context: CanvasRenderingContext2D,
     layer: TextLayer,
     width: number,
-    height: number
+    height: number,
+    domRuns?: {
+      text: string;
+      x: number;
+      y: number;
+      color: string;
+      font: string;
+      fontSize: number;
+      opacity: number;
+      underline: boolean;
+    }[]
   ) => {
+    if (domRuns?.length) {
+      context.save();
+      context.textBaseline = 'middle';
+
+      domRuns.forEach((run) => {
+        context.font = run.font;
+        context.globalAlpha = run.opacity;
+        context.fillStyle = run.color;
+        context.fillText(run.text, run.x, run.y);
+
+        if (run.underline) {
+          context.beginPath();
+          context.lineWidth = Math.max(1, run.fontSize / 15);
+          context.moveTo(run.x, run.y + run.fontSize * 0.42);
+          context.lineTo(
+            run.x + context.measureText(run.text).width,
+            run.y + run.fontSize * 0.42
+          );
+          context.strokeStyle = run.color;
+          context.stroke();
+        }
+      });
+
+      context.restore();
+      return;
+    }
+
     const centerX =
       width *
       (layer.x / 100);
@@ -2342,9 +2486,6 @@ const handleTextPointerUp = (
     const fontSize =
       layer.fontSize *
       (width / TEXT_REFERENCE_WIDTH);
-
-    const lines =
-      layer.text.split('\n');
 
     const lineHeight =
       fontSize * 1.25;
@@ -2369,16 +2510,88 @@ const handleTextPointerUp = (
     context.globalAlpha =
       layer.opacity;
 
-    const lineData =
-      lines.map(
-        (line) => ({
-          line,
-          width:
-            context.measureText(
-              line
-            ).width,
-        })
-      );
+    const lineData: {
+      line: string;
+      width: number;
+      start: number;
+      end: number;
+    }[] = [];
+    const maxLineWidth = width * 0.9;
+    let textOffset = 0;
+
+    layer.text.split('\n').forEach((paragraph) => {
+      if (!paragraph) {
+        lineData.push({
+          line: '',
+          width: 0,
+          start: textOffset,
+          end: textOffset,
+        });
+        textOffset += 1;
+        return;
+      }
+
+      const words = /\S+\s*/g;
+      let currentLine = '';
+      let currentStart = textOffset;
+      let word: RegExpExecArray | null;
+
+      while ((word = words.exec(paragraph)) !== null) {
+        const nextLine = currentLine + word[0];
+
+        if (
+          currentLine &&
+          context.measureText(nextLine).width > maxLineWidth
+        ) {
+          const visibleLine = currentLine.trimEnd();
+          lineData.push({
+            line: visibleLine,
+            width: context.measureText(visibleLine).width,
+            start: currentStart,
+            end: currentStart + visibleLine.length,
+          });
+          currentStart = textOffset + word.index;
+          currentLine = word[0].trimStart();
+        } else {
+          currentLine = nextLine;
+        }
+
+        while (
+          currentLine.length > 0 &&
+          context.measureText(currentLine).width > maxLineWidth
+        ) {
+          let splitAt = currentLine.length - 1;
+          while (
+            splitAt > 1 &&
+            context.measureText(currentLine.slice(0, splitAt)).width >
+              maxLineWidth
+          ) {
+            splitAt -= 1;
+          }
+          const visibleLine = currentLine.slice(0, splitAt);
+          lineData.push({
+            line: visibleLine,
+            width: context.measureText(visibleLine).width,
+            start: currentStart,
+            end: currentStart + visibleLine.length,
+          });
+          currentStart += splitAt;
+          currentLine = currentLine.slice(splitAt);
+        }
+      }
+
+      if (currentLine) {
+        const visibleLine = currentLine.trimEnd();
+        lineData.push({
+          line: visibleLine,
+          width: context.measureText(visibleLine).width,
+          start: currentStart,
+          end: currentStart + visibleLine.length,
+        });
+      }
+
+      textOffset += paragraph.length + 1;
+    });
 
     const totalHeight =
       lineData.length *
@@ -2389,37 +2602,23 @@ const handleTextPointerUp = (
       totalHeight / 2 +
       lineHeight / 2;
 
-    let globalOffset = 0;
+    const blockWidth = Math.max(
+      0,
+      ...lineData.map(({ width: lineWidth }) => lineWidth)
+    );
+    const colorRanges = [
+      ...(layer.colorRanges ?? []),
+      ...layer.highlightedWords,
+    ];
 
     lineData.forEach(
       (
         {
           line,
-          width: lineWidth,
+          start: lineStart,
         },
         lineIndex
       ) => {
-        let startX =
-          centerX;
-
-        if (
-          layer.align ===
-          'left'
-        ) {
-          startX =
-            centerX -
-            lineWidth / 2;
-        }
-
-        if (
-          layer.align ===
-          'right'
-        ) {
-          startX =
-            centerX +
-            lineWidth / 2;
-        }
-
         const drawY =
           startY +
           lineIndex *
@@ -2432,12 +2631,8 @@ const handleTextPointerUp = (
           end: number;
         }[] = [];
 
-        const lineStart =
-          globalOffset;
-
         const lineEnd =
-          globalOffset +
-          line.length;
+          lineStart + line.length;
 
         const boundaries =
           new Set<number>();
@@ -2447,7 +2642,7 @@ const handleTextPointerUp = (
           line.length
         );
 
-        layer.highlightedWords.forEach(
+        colorRanges.forEach(
           (range) => {
             if (
               range.end <=
@@ -2515,7 +2710,7 @@ const handleTextPointerUp = (
             localEnd;
 
           const matchingRange =
-            layer.highlightedWords.find(
+            colorRanges.find(
               (range) =>
                 absoluteStart >=
                   range.start &&
@@ -2551,26 +2746,12 @@ const handleTextPointerUp = (
             0
           );
 
-        let cursorX =
-          centerX -
-          fullWidth / 2;
+        let cursorX = centerX - fullWidth / 2;
 
-        if (
-          layer.align ===
-          'left'
-        ) {
-          cursorX =
-            centerX -
-            fullWidth / 2;
-        }
-
-        if (
-          layer.align ===
-          'right'
-        ) {
-          cursorX =
-            centerX -
-            fullWidth / 2;
+        if (layer.align === 'left') {
+          cursorX = centerX - blockWidth / 2;
+        } else if (layer.align === 'right') {
+          cursorX = centerX + blockWidth / 2 - fullWidth;
         }
 
         segments.forEach(
@@ -2626,8 +2807,6 @@ const handleTextPointerUp = (
           }
         );
 
-        globalOffset +=
-          line.length + 1;
       }
     );
 
@@ -2656,6 +2835,127 @@ const handleTextPointerUp = (
         throw new Error(
           'Canvas context unavailable'
         );
+      }
+
+      const board = canvasAreaRef.current;
+      const boardRect = board?.getBoundingClientRect();
+      const textLayouts = new Map<
+        number,
+        NonNullable<Parameters<typeof drawTextLayer>[4]>
+      >();
+
+      if (board && boardRect && boardRect.width > 0 && boardRect.height > 0) {
+        const scaleX = outputCanvas.width / boardRect.width;
+        const scaleY = outputCanvas.height / boardRect.height;
+
+        textLayers.forEach((layer) => {
+          const layerElement = board.querySelector<HTMLElement>(
+            `[data-text-layer-id="${layer.id}"]`
+          );
+          if (!layerElement) return;
+
+          const layerStyle = window.getComputedStyle(layerElement);
+          const fontSize = parseFloat(layerStyle.fontSize) * scaleX;
+          const font = [
+            layerStyle.fontStyle,
+            layerStyle.fontVariant,
+            layerStyle.fontWeight,
+            `${fontSize}px`,
+            layerStyle.fontFamily,
+          ].join(' ');
+          const opacity = parseFloat(layerStyle.opacity);
+          const underline =
+            layerStyle.textDecorationLine.includes('underline');
+          const runs: NonNullable<
+            Parameters<typeof drawTextLayer>[4]
+          > = [];
+          const contentElements =
+            layerElement.querySelectorAll<HTMLElement>('[data-text-content]');
+
+          contentElements.forEach((contentElement) => {
+            const walker = document.createTreeWalker(
+              contentElement,
+              NodeFilter.SHOW_TEXT
+            );
+            const color = window.getComputedStyle(contentElement).color;
+            let node = walker.nextNode();
+
+            while (node) {
+              const textNode = node as Text;
+              const text = textNode.textContent ?? '';
+              const range = document.createRange();
+              let offset = 0;
+              let currentRun: {
+                text: string;
+                top: number;
+                x: number;
+                height: number;
+              } | null = null;
+
+              for (const character of Array.from(text)) {
+                const characterLength = character.length;
+                range.setStart(textNode, offset);
+                range.setEnd(textNode, offset + characterLength);
+                const rect = range.getBoundingClientRect();
+                offset += characterLength;
+
+                if (!rect.height) continue;
+
+                const lineTop = Math.round(rect.top * 2) / 2;
+                if (currentRun && currentRun.top === lineTop) {
+                  currentRun.text += character;
+                } else {
+                  if (currentRun) {
+                    runs.push({
+                      text: currentRun.text,
+                      x: (currentRun.x - boardRect.left) * scaleX,
+                      y:
+                        (currentRun.top +
+                          currentRun.height / 2 -
+                          boardRect.top) *
+                        scaleY,
+                      color,
+                      font,
+                      fontSize,
+                      opacity,
+                      underline,
+                    });
+                  }
+
+                  currentRun = {
+                    text: character,
+                    top: lineTop,
+                    x: rect.left,
+                    height: rect.height,
+                  };
+                }
+              }
+
+              if (currentRun) {
+                runs.push({
+                  text: currentRun.text,
+                  x: (currentRun.x - boardRect.left) * scaleX,
+                  y:
+                    (currentRun.top +
+                      currentRun.height / 2 -
+                      boardRect.top) *
+                    scaleY,
+                  color,
+                  font,
+                  fontSize,
+                  opacity,
+                  underline,
+                });
+              }
+
+              node = walker.nextNode();
+            }
+          });
+
+          if (runs.length) {
+            textLayouts.set(layer.id, runs);
+          }
+        });
       }
 
       context.imageSmoothingEnabled =
@@ -2709,7 +3009,8 @@ const handleTextPointerUp = (
             context,
             layer,
             outputCanvas.width,
-            outputCanvas.height
+            outputCanvas.height,
+            textLayouts.get(layer.id)
           );
         }
       );
@@ -2848,6 +3149,8 @@ const handleTextPointerUp = (
 
   const downloadImage =
     async () => {
+      if (isDownloading) return;
+
       if (
         !hasImage &&
         textLayers.length === 0
@@ -2858,6 +3161,9 @@ const handleTextPointerUp = (
 
         return;
       }
+
+      setIsDownloading(true);
+      setDownloadComplete(false);
 
       try {
         setExportMessage(
@@ -2892,10 +3198,13 @@ const handleTextPointerUp = (
           },
           2500
         );
-      } catch {
+      } catch (error) {
+        console.error('Image download failed:', error);
         setExportMessage(
           'Download failed. Please try again.'
         );
+      } finally {
+        setIsDownloading(false);
       }
     };
 
@@ -3150,7 +3459,19 @@ const handleTextPointerUp = (
   }
                                   {/* HEADER */}
   return (
-    <div className="fixed inset-0 z-50 flex min-h-dvh flex-col overflow-hidden bg-[#161a1f] text-white">
+    <div
+      onPointerDownCapture={(event) => {
+        const target = event.target;
+        if (
+          target instanceof Element &&
+          !target.closest('[data-corner-rounding-control]') &&
+          !target.closest('[data-photo-layer]')
+        ) {
+          setShowCornerRoundingControl(false);
+        }
+      }}
+      className="fixed inset-0 z-50 flex min-h-dvh flex-col overflow-hidden bg-[#161a1f] text-white"
+    >
       <header className="flex h-14 shrink-0 items-center justify-between border-b border-white/10 bg-[#20242c] px-3 sm:px-5">
         <div className="flex min-w-0 items-center gap-2">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#f3ad61] text-sm font-black text-black">
@@ -3174,27 +3495,31 @@ const handleTextPointerUp = (
             Done
           </button>*/}
                                 {/* COMPACT DOWNLOAD + RESET */}
-<div
-  data-photo-editor-actions
-  className="inline-flex w-fit gap-2">
-   <button
-     type="button"
-     onClick={downloadImage}
-     className={`flex h-8 w-23 items-center justify-center rounded-md px-2 text-[9px] font-black transition ${
-      downloadComplete
-        ? 'bg-emerald-500 text-black'
-        : 'bg-[#f3ad61] text-black'
-     }`}>
-     {downloadComplete ? '✓' :  'Download↓'}
-   </button>
+        <div data-photo-editor-actions
+               className="inline-flex w-fit gap-2">
+          <button type="button"onClick={downloadImage}disabled={isDownloading}
+            aria-busy={isDownloading}
+            aria-label={isDownloading ? 'Preparing download' : 'Download image'}
+            className={`flex h-8 w-23 items-center justify-center rounded-md px-2 text-[9px] font-black transition ${
+            downloadComplete
+            ? 'bg-emerald-500 text-black'
+            : 'bg-[#f3ad61] text-black'
+            }`}>
 
-  <button
-    type="button"
-    onClick={resetAll}
-    className="flex h-7 w-13 items-center justify-center rounded-md border border-white/10 bg-[#2b3238] px-2 text-[9px] font-bold text-white">
-    Reset
-  </button>
-</div>
+            {isDownloading ? (
+            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/30 border-t-black" />
+            ) : downloadComplete ? (
+            '✓'
+            ) : (
+            'Download↓'
+            )}
+          </button>
+
+          <button type="button"onClick={resetAll}
+          className="flex h-7 w-13 items-center justify-center rounded-md border border-white/10 bg-[#2b3238] px-2 text-[9px] font-bold text-white">
+          Reset
+         </button>
+       </div>
           
         
   </header>
@@ -3257,6 +3582,33 @@ const handleTextPointerUp = (
 
               {photoLayers.map((layer, index) => {
                 const selected = selectedPhotoId === layer.id;
+                const cornerRoundness = clamp(layer.cornerRoundness, 0, 100);
+                const minimumImageSide = Math.min(
+                  layer.naturalWidth,
+                  layer.naturalHeight
+                );
+                const cornerRadiusXPercent =
+                  (50 * cornerRoundness * minimumImageSide) /
+                  (100 * layer.naturalWidth);
+                const cornerRadiusYPercent =
+                  (50 * cornerRoundness * minimumImageSide) /
+                  (100 * layer.naturalHeight);
+                const featherEdgePercentX =
+                  (minimumImageSide *
+                    0.2 *
+                    (layer.edgeFeather / 100) *
+                    100) /
+                  layer.naturalWidth;
+                const featherEdgePercentY =
+                  (minimumImageSide *
+                    0.2 *
+                    (layer.edgeFeather / 100) *
+                    100) /
+                  layer.naturalHeight;
+                const featherMask =
+                  layer.edgeFeather > 0
+                    ? `linear-gradient(to right, transparent 0%, black ${featherEdgePercentX}%, black ${100 - featherEdgePercentX}%, transparent 100%), linear-gradient(to bottom, transparent 0%, black ${featherEdgePercentY}%, black ${100 - featherEdgePercentY}%, transparent 100%)`
+                    : undefined;
                 return (
                   <div
                     key={layer.id}
@@ -3287,6 +3639,11 @@ const handleTextPointerUp = (
                         width: '100%',
                         height: 'auto',
                         filter: getFilterString(layer),
+                        borderRadius: `${cornerRadiusXPercent}% / ${cornerRadiusYPercent}%`,
+                        maskImage: featherMask,
+                        maskComposite: 'intersect',
+                        WebkitMaskImage: featherMask,
+                        WebkitMaskComposite: 'source-in',
                         touchAction: 'none',
                       }}
                       className="block cursor-move select-none rounded-0"
@@ -3294,7 +3651,7 @@ const handleTextPointerUp = (
 
                     {selected && showPhotoSelection && !isCropping && (
                       <>
-                        <div className="pointer-events-none absolute inset-0 rounded-sm border-2 border-double border-[#dc2626]" />
+                        <div className="pointer-events-none absolute inset-0 rounded-0 border-2 border-double border-[#dc2626]" />
                         <button
                           type="button"
                           onPointerDown={(event) => { event.preventDefault(); event.stopPropagation(); }}
@@ -3316,7 +3673,7 @@ const handleTextPointerUp = (
 
                         <button
                           type="button"onPointerDown={(event) => beginPhotoResize(event, layer)}
-                          className="absolute -bottom-3 -right-3 z-30 flex h-5 w-5  touch-none items-center justify-center rounded-sm border-2 border-[#6b7280] bg-[#b0b0b0] text-xs font-bold leading-none text-black shadow"
+                          className="absolute -bottom-3 -right-3 z-30 flex h-5.5 w-5.5  touch-none items-center justify-center rounded-sm border-2 border-[#6b7280] bg-[#b0b0b0] text-xs font-bold leading-none text-black shadow"
                           style={{ touchAction: 'none' }}
                           aria-label="Resize selected photo"
                           >
@@ -3327,12 +3684,109 @@ const handleTextPointerUp = (
                   </div>
                 );
               })}
+
+              {selectedPhoto &&
+                showCornerRoundingControl &&
+                !isCropping && (
+                  <section
+                    data-corner-rounding-control
+                    onPointerDown={(event) => event.stopPropagation()}
+                    className="fixed bottom-[88px] left-2 right-2 z-[60] mx-auto w-80 max-w-[420px] rounded-xl border border-white/15 bg-[#20242c]/95 p-2 shadow-xl backdrop-blur">
+                    <div className="mb-1 flex items-center justify-between">
+                      <h2 className="text-[11px] font-bold">Rounded & Feather</h2>
+                      <button
+                        type="button"
+                        onPointerDown={(event) => {
+                          event.preventDefault();
+                          event.stopPropagation();
+                        }}
+                        onClick={() => setShowCornerRoundingControl(false)}
+                        aria-label="Close rounded corners control"
+                        className="flex h-5 w-5 items-center justify-center rounded-full bg-white/10 text-sm leading-none text-white/80 hover:bg-white/20"
+                      >
+                        ×
+                      </button>
+                    </div>
+                    <div className="mb-1 flex items-center justify-between">
+                      <label
+                        htmlFor="corner-roundness-slider"
+                        className="text-[10px] font-semibold text-white/70"
+                      >
+                        Corner roundness
+                      </label>
+                      <span className="text-[10px] text-white/60">
+                        {selectedPhoto.cornerRoundness}
+                      </span>
+                    </div>
+                    <input
+                      id="corner-roundness-slider"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={selectedPhoto.cornerRoundness}
+                      onChange={(event) => {
+                        const cornerRoundness = clamp(
+                          Number(event.target.value),
+                          0,
+                          100
+                        );
+                        updatePhotoLayer(selectedPhoto.id, (layer) => ({
+                          ...layer,
+                          cornerRoundness,
+                        }));
+                      }}
+                      aria-label="Corner roundness"
+                      className="w-full accent-[#f3ad61]"/>
+                    <div className="mb-0 mt-1 flex items-center justify-between">
+                      <label
+                        htmlFor="edge-feather-slider"
+                        className="text-[10px] font-semibold text-white/70"
+                      >
+                        Edge Feather
+                      </label>
+                      <span className="text-[10px] text-white/60">
+                        {selectedPhoto.edgeFeather}
+                      </span>
+                    </div>
+                    <input
+                      id="edge-feather-slider"
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={1}
+                      value={selectedPhoto.edgeFeather}
+                      onChange={(event) => {
+                        const edgeFeather = clamp(
+                          Number(event.target.value),
+                          0,
+                          100
+                        );
+                        updatePhotoLayer(selectedPhoto.id, (layer) => ({
+                          ...layer,
+                          edgeFeather,
+                        }));
+                      }}
+                      aria-label="Edge Feather"
+                      className="w-full accent-[#f3ad61]"
+                    />
+                  </section>
+                )}
+
+              {alignedTextGuideX !== null && (
+                <div
+                  aria-hidden="true"
+                  className="pointer-events-none absolute inset-y-0 z-[25] border-l border-dashed border-white/60 shadow-[0_0_2px_rgba(0,0,0,0.8)]"
+                  style={{ left: `${alignedTextGuideX}%` }}
+                />
+              )}
  
                                        {/* T-all */}
  {textLayers.map((layer) => (
   <div
     key={layer.id}
     data-text-layer
+    data-text-layer-id={layer.id}
     onPointerDown={(event) => handleTextPointerDown(event, layer)}
     onPointerMove={(event) => handleTextPointerMove(event, layer)}
     onPointerUp={(event) => handleTextPointerUp(event, layer)}
@@ -3417,6 +3871,7 @@ const handleTextPointerUp = (
       if (!ranges.length) {
         return (
           <span
+            data-text-content
             style={{
               color: layer.color,
             }}
@@ -3439,6 +3894,7 @@ const handleTextPointerUp = (
             parts.push(
               <span
                 key={`normal-${index}`}
+                data-text-content
                 style={{
                   color: layer.color,
                 }}
@@ -3462,6 +3918,7 @@ const handleTextPointerUp = (
           parts.push(
             <span
               key={`color-${index}`}
+              data-text-content
               style={{
                 color: range.color,
               }}
@@ -3484,6 +3941,7 @@ const handleTextPointerUp = (
         parts.push(
           <span
             key="normal-last"
+            data-text-content
             style={{
               color: layer.color,
             }}
@@ -3754,10 +4212,8 @@ const handleTextPointerUp = (
     data-photo-editor-panel
     className={`${overlayPanelClass} w-[min(94vw,620px)] max-h-[52vh] overflow-y-auto p-2`}
     style={{
-      bottom: keyboardHeight > 0 ? '12px' : '87px',
-      maxHeight: keyboardHeight > 0
-        ? 'calc(100dvh - 24px)'
-        : '52vh',
+      bottom: '87px',
+      maxHeight: '52vh',
     }}
   >
     {/* HEADER */}

@@ -178,6 +178,7 @@ function PhotoEquality() {
   const [rotation, setRotation] = useState(0);
   const [cropMode, setCropMode] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   useEffect(() => {
   const handleOutsideClick = (event: MouseEvent) => {
     const target = event.target as HTMLElement;
@@ -594,12 +595,19 @@ function PhotoEquality() {
               <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>
 
             <div className="ml-auto flex items-center">
-              <button type="button" onClick={downloadImage} disabled={!hasImage}
-               className={`control-button ml-5.5 flex items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[9px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${downloadComplete ? 'bg-emerald-500 text-black' : 'bg-[#f1ae62] text-[#24272a] hover:bg-[#ffc47e]'}`}
-               data-testid="button-download">
-               {downloadComplete ? <Check size={14} /> : <Download size={14} />}
-               {downloadComplete ? 'Saved' : 'Save'}
-              </button>
+          <button type="button"onClick={downloadImage} disabled={!hasImage || isDownloading}
+              className={`control-button ml-5.5 flex items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[9px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${downloadComplete ? 'bg-emerald-500 text-black' : 'bg-[#f1ae62] text-[#24272a] hover:bg-[#ffc47e]'}`}
+              data-testid="button-download">
+              {isDownloading ? (
+              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#24272a]/30 border-t-[#24272a]" />
+              ) : downloadComplete ? (
+              <Check size={14} />
+              ) : (
+              <Download size={14} />
+             )}
+
+             {downloadComplete ? 'Saved' : isDownloading ? '' : 'Save'}
+           </button>
             </div>
 
             </div>
