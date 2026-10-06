@@ -1,6 +1,8 @@
 package com.photoequality.app;
 
+import android.Manifest;
 import android.content.ContentValues;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -8,11 +10,15 @@ import android.os.Handler;
 import android.provider.MediaStore;
 import android.util.Base64;
 import android.webkit.JavascriptInterface;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import com.getcapacitor.BridgeActivity;
 import java.io.OutputStream;
 
 public class MainActivity extends BridgeActivity {
+    private static final int REQUEST_CODE_STORAGE_PERMISSION = 1001;
     private final Handler handler = new Handler();
+    
     private final Runnable injectorRunnable = new Runnable() {
         @Override
         public void run() {
@@ -61,6 +67,9 @@ public class MainActivity extends BridgeActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Request storage/media permission on app start so file picker opens naturally without click blocks
+        checkAndRequestStoragePermission();
         
         try {
             getBridge().getWebView().getSettings().setJavaScriptEnabled(true);
@@ -116,6 +125,31 @@ public class MainActivity extends BridgeActivity {
                 }, "AndroidDownloadBridge");
         } catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    private void checkAndRequestStoragePermission() {
+        String permission;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permission = Manifest.permission.READ_MEDIA_IMAGES;
+        } else {
+            permission = Manifest.permission.READ_EXTERNAL_STORAGE;
+        }
+
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{permission}, REQUEST_CODE_STORAGE_PERMISSION);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_STORAGE_PERMISSION) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission granted successfully
+            } else {
+                // Denied ("Don't Allow") - gracefully do nothing, app will not crash
+            }
         }
     }
 

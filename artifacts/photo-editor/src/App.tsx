@@ -1,5 +1,17 @@
 import { App as CapacitorApp } from "@capacitor/app";
 
+import { Link } from "wouter";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsConditions from "./pages/TermsConditions";
+import Disclaimer from "./pages/Disclaimer";
+import ContactUs from "./pages/ContactUs";
+
+import ImgToolsPage from './pages/imgTools';
+import Passport from "./pages/Passport";
+import Reduce from "./pages/Reduce";
+import Increase from "./pages/Increase";
+import RemoveBg from "./pages/RemoveBg";
+
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
 import { Capacitor } from '@capacitor/core';
@@ -7,7 +19,6 @@ import logo from '../../images/logoe3.jpeg';
 import { TopNavigation } from './components/navigation/TopNavigation';
 import BottomNavigationPage from './pages/bottom-navigation';
 import BreadcrumbNavigationPage from './pages/breadcrumb-navigation';
-import MobileNavigationPage from './pages/mobile-navigation';
 import OrbitNavigationPage from './pages/orbit-navigation';
 import PulseNavigationPage from './pages/pulse-navigation';
 import OldFuturePage from './pages/OldFuture';
@@ -169,6 +180,23 @@ function PhotoEquality() {
   const stageRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [sourceUrl, setSourceUrl] = useState<string | null>(null);
+
+
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+  const handleOutsideClick = () => {
+    setMenuOpen(false);
+  };
+
+  if (menuOpen) {
+    document.addEventListener("click", handleOutsideClick);
+  }
+
+  return () => {
+    document.removeEventListener("click", handleOutsideClick);
+  };
+}, [menuOpen]);
+
 
 
   const [fileName, setFileName] = useState('');
@@ -590,13 +618,13 @@ function PhotoEquality() {
      </div>
 
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3.5">
               <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Photo-EQuality</h1>
-              <span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>
+              {/*<span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>*/}
 
             <div className="ml-auto flex items-center">
           <button type="button"onClick={downloadImage} disabled={!hasImage || isDownloading}
-              className={`control-button ml-5.5 flex items-center justify-center gap-0.5 rounded-md px-2 py-1.5 text-[9px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${downloadComplete ? 'bg-emerald-500 text-black' : 'bg-[#f1ae62] text-[#24272a] hover:bg-[#ffc47e]'}`}
+              className={`control-button ml-5 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[9px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${downloadComplete ? 'bg-emerald-500 text-black' : 'bg-[#f1ae62] text-[#24272a] hover:bg-[#ffc47e]'}`}
               data-testid="button-download">
               {isDownloading ? (
               <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#24272a]/30 border-t-[#24272a]" />
@@ -610,6 +638,59 @@ function PhotoEquality() {
            </button>
             </div>
 
+
+  <div className="relative">
+  {/* Menu Button */}
+ <button
+  type="button"onClick={(e) => {e.stopPropagation();
+    setMenuOpen((prev) => !prev);
+  }}
+    className="flex items-center gap-1 bg-transparent px-1 py-1 text-sm text-white">
+    <span className="text-3xl leading-none">☰</span>
+    {/*<span className="text-sm">Menu</span>*/}
+  </button>
+
+  {/* Menu Dropdown */}
+ {menuOpen && (
+  <div
+    onClick={(e) => e.stopPropagation()}
+    className="absolute right-0 top-full z-[100] mt-2 w-36 rounded-lg border border-[#30363d] bg-[#303030] p-2 shadow-2xl">
+
+      <Link
+        to="/privacy-policy"
+        onClick={() => setMenuOpen(false)}
+        className="block rounded-md px-3 py-2.5 text-sm  text-blue-400 transition hover:bg-[#30363d]"
+      >
+        • Privacy Policy
+      </Link>
+
+      <Link
+        to="/terms-conditions"
+        onClick={() => setMenuOpen(false)}
+        className="block rounded-md px-3 py-2.5 text-sm  text-blue-400 transition hover:bg-[#30363d]"
+      >
+        • Terms & Conditions
+      </Link>
+
+      <Link
+        to="/disclaimer"
+        onClick={() => setMenuOpen(false)}
+        className="block rounded-md px-3 py-2.5 text-sm  text-blue-400 transition hover:bg-[#30363d]"
+      >
+        •Disclaimer
+      </Link>
+
+      <Link
+        to="/contact-us"
+        onClick={() => setMenuOpen(false)}
+        className="block rounded-md px-3 py-2.5 text-sm  text-blue-400 transition hover:bg-[#30363d]">
+        • Contact Us
+      </Link>
+
+    </div>
+  )}
+</div>
+
             </div>
             <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
           </div>
@@ -617,8 +698,8 @@ function PhotoEquality() {
         <TopNavigation>
           <div className="items-center grid w-full px-2 py-1 grid-cols-3 gap-3">
           <a href="/nav/mixer" className="flex items-center justify-center rounded-md h-6 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
-          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Then-Now</a>
-          <a href="/nav/mobile" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pending</a>
+          <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">TimeX</a>
+          <a href="/nav/imgtools" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Tools</a>
           {/*<a href="/nav/breadcrumb" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
           <a href="/nav/bottom" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
           {/*<a href="/nav/orbit" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
@@ -751,12 +832,12 @@ function PhotoEquality() {
         {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]"/> Edits are private by default</>}
         </div>
 
-    <div className="flex w-full items-center gap-2">
-     <div className="relative">
+    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 sm:gap-2">
+     <div className="relative min-w-0 flex-1 sm:flex-none">
       <button type="button" onClick={(event) => { event.stopPropagation();
       setShowAdjustments((value) => !value);}}
-      className="flex w-20.5 items-center justify-between rounded-lg border border-[#30363d] bg-[#20252b] px-3 py-2 text-left">
-      <span className="text-[14px] font-bold text-[#eee7db]">
+      className="flex w-full items-center justify-center gap-1 rounded-lg border border-[#30363d] bg-[#20252b] px-2 py-2 text-left sm:w-auto sm:justify-between sm:gap-3 sm:px-3">
+      <span className="text-[11px] font-bold text-[#eee7db] sm:text-[14px]">
       Adjust
       </span>
       <span className="text-[12px] text-[#8a8f8f]">
@@ -819,11 +900,11 @@ function PhotoEquality() {
                        {/*Filter start here*/}
     <div
         onClick={(event) => event.stopPropagation()}
-          className="relative w-20 min-w-0">
+          className="relative min-w-0 flex-1 sm:flex-none">
            {/* Filters Button */}
         <button type="button"onClick={() => setIsLooksOpen((prev) => !prev)}
-          className="flex w-20 items-center justify-between text-left">
-          <p className="inline-block rounded-lg border border-[#30363d] bg-[#DB2777] px-4 py-2 text-[13px] font-bold text-[#eee7db] shadow-sm">
+          className="flex w-full items-center justify-center text-left sm:w-auto">
+          <p className="block w-full rounded-lg border border-[#30363d] bg-[#DB2777] px-1.5 py-2 text-center text-[11px] font-bold text-[#eee7db] shadow-sm sm:w-auto sm:px-4 sm:text-[13px]">
           Filters
           </p>
        </button>
@@ -911,7 +992,8 @@ function PhotoEquality() {
 </div>
 
 
-<div className="relative" data-tools-menu>
+
+<div className="relative min-w-0 flex-1 sm:flex-none" data-tools-menu>
 
   {/* Small Tools Button */}
   <button
@@ -921,17 +1003,19 @@ function PhotoEquality() {
       e.stopPropagation();
       setToolsOpen((prev) => !prev);
     }}
-    className="control-button flex items-center justify-center rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
-    data-testid="button-tools"
-  >
-    Tools
+   className={`control-button flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-[9px] font-semibold sm:w-auto sm:px-2.5 sm:py-1.5 ${
+  cropMode
+    ? "!border-[#f3ad61] !bg-[#f3ad61] !text-[#111827]"
+    : "!border-[#30363d] !bg-[#20252b] !text-[#a8aaa5] hover:!border-[#55534c] hover:!text-[#eee7db]"
+} disabled:cursor-not-allowed disabled:opacity-40`}>
+    Crop
   </button>
 
   {/* Tools Popup */}
   {toolsOpen && (
     <div
       onMouseDown={(e) => e.stopPropagation()}
-      className="absolute left-1/9 bottom-full z-50 mb-10 w-78 -translate-x-1/2 flex items-center justify-center gap-6 rounded-lg border border-[#30363d] bg-[#9ca3af] px-5 py-1 shadow-xl"
+      className="absolute right-10px bottom-full z-50 mb-3 w-63 -translate-x-1/2 flex items-center justify-center gap-3 rounded-lg border border-[#30363d] bg-[#9ca3af] px-5 py-1 shadow-xl"
     >
 
       {/* Crop */}
@@ -939,6 +1023,7 @@ function PhotoEquality() {
         type="button"
         onClick={(e) => {
           e.stopPropagation();
+
           if (cropMode) {
             if (cropRect) setAppliedCrop(cropRect);
             setCropMode(false);
@@ -951,15 +1036,14 @@ function PhotoEquality() {
           setCropRect({ x: 0, y: 0, w: 1, h: 1 });
         }}
         disabled={!hasImage}
-        className={`control-button flex items-center justify-center gap-1 rounded-md border px-2 py-1 text-[9px] font-semibold ${
+        className={`control-button flex h-8.5 w-[76px] shrink-0 items-center justify-center gap-1 rounded-md border px-2 py-1 text-[9px] font-semibold ${
           cropMode
             ? "border-[#f3ad61] bg-[#342b23] text-[#f3b572]"
             : "border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]"
         } disabled:cursor-not-allowed disabled:opacity-40`}
-        data-testid="button-toggle-crop"
-      >
+        data-testid="button-toggle-crop">
         <Crop size={13} />
-        {cropMode ? 'Apply' : 'Crop'}
+        {cropMode ? "Apply" : "Crop"}
       </button>
 
       {/* Left */}
@@ -971,7 +1055,7 @@ function PhotoEquality() {
           setToolsOpen(false);
         }}
         disabled={!hasImage}
-        className="control-button flex items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
+        className="control-button flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
         data-testid="button-rotate-left"
       >
         <RotateCcw size={13} />
@@ -987,7 +1071,7 @@ function PhotoEquality() {
           setToolsOpen(false);
         }}
         disabled={!hasImage}
-        className="control-button flex items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
+        className="control-button flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
         data-testid="button-rotate-right"
       >
         <RotateCw size={13} />
@@ -998,14 +1082,16 @@ function PhotoEquality() {
   )}
 
 </div>
+
+
       
 
-      <span className="ml-0">
-      <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-[#394047] bg-[#20252b] px-3.5 py-2.5 text-[11px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:flex-none" data-testid="button-reset-all">
+      <span className="ml-0 min-w-0 flex-1 sm:flex-none">
+      <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex w-full items-center justify-center gap-1 rounded-lg border border-[#394047] bg-[#20252b] px-1.5 py-1.5 text-[10px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1 sm:text-[11px]" data-testid="button-reset-all">
       <RotateCcw size={14} /> Reset
       </button>
       </span>
-</div>
+   </div>
 
       
       </footer>
@@ -1063,11 +1149,22 @@ function App() {
         <Route path="/nav/mixer" component={TopNavigationPage} />
         <Route path="/nav/top" component={TopNavigationPage} />
         <Route path="/nav/sidebar" component={OldFuturePage} />
-        <Route path="/nav/mobile" component={MobileNavigationPage} />
         <Route path="/nav/breadcrumb" component={BreadcrumbNavigationPage} />
         <Route path="/nav/bottom" component={BottomNavigationPage} />
         <Route path="/nav/orbit" component={OrbitNavigationPage} />
         <Route path="/nav/pulse" component={PulseNavigationPage} />
+
+        <Route path="/privacy-policy" component={PrivacyPolicy} />
+        <Route path="/terms-conditions" component={TermsConditions} />
+        <Route path="/disclaimer" component={Disclaimer} />
+        <Route path="/contact-us" component={ContactUs} />
+
+        <Route path="/nav/imgtools" component={ImgToolsPage} />
+        <Route path="/images/passport" component={Passport} />
+        <Route path="/images/reduce" component={Reduce} />
+        <Route path="/images/increase" component={Increase} />
+        <Route path="/images/remove-bg" component={RemoveBg} />
+
         <Route component={NotFound} />
       </Switch>
     </WouterRouter>
