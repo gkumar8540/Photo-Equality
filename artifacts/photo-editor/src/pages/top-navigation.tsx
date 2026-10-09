@@ -4129,8 +4129,8 @@ const handleTextPointerUp = (
                   className="absolute inset-0 h-full w-full cursor-pointer border-0 bg-transparent p-0 opacity-0"
                 />
 
-                <span className="pointer-events-none text-lg">
-                  +
+                <span className="pointer-events-none text-sm">
+                  RGB
                 </span>
               </label>
             </div>

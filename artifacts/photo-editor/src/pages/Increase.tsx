@@ -54,10 +54,31 @@ export default function Increase() {
 
   const [width, setWidth] = useState(0);
   const [height, setHeight] = useState(0);
+  const [sourceWidth, setSourceWidth] = useState(0);
+  const [sourceHeight, setSourceHeight] = useState(0);
 
   const [resizeMode, setResizeMode] = useState<
     "auto" | "custom"
   >("auto");
+
+const [isDownloading, setIsDownloading] = useState(false);
+const [downloadSuccess, setDownloadSuccess] = useState(false);
+const handleDownload = async () => {
+  if (!outputBlob || isDownloading) return;
+
+  setIsDownloading(true);
+  setDownloadSuccess(false);
+
+  try {
+    await download();
+    setDownloadSuccess(true);
+    setTimeout(() => setDownloadSuccess(false), 3000);
+  } catch (error) {
+    console.error("Download failed:", error);
+  } finally {
+    setIsDownloading(false);
+  }
+};
 
   const [customWidth, setCustomWidth] = useState(1920);
   const [customHeight, setCustomHeight] = useState(1080);
@@ -104,40 +125,29 @@ export default function Increase() {
     img.onload = () => {
       setWidth(img.naturalWidth);
       setHeight(img.naturalHeight);
+      setSourceWidth(img.naturalWidth);
+      setSourceHeight(img.naturalHeight);
 
       setCustomWidth(img.naturalWidth);
       setCustomHeight(img.naturalHeight);
 
-      URL.revokeObjectURL(img.src);
+      // Keep the selected image URL alive for the preview and processing.
     };
 
     img.src = url;
   };
 
   const getTargetDimensions = () => {
-    if (!width || !height) {
-      return {
-        width: customWidth,
-        height: customHeight,
-      };
-    }
-
     if (resizeMode === "custom") {
       return {
-        width: Math.max(100, customWidth),
-        height: Math.max(100, customHeight),
+        width: Math.max(100, Math.min(10000, customWidth)),
+        height: Math.max(100, Math.min(10000, customHeight)),
       };
     }
 
-    /*
-      Start with original dimensions.
-      If required file size cannot be reached through
-      quality alone, dimensions will be increased
-      progressively.
-    */
     return {
-      width,
-      height,
+      width: sourceWidth || width || customWidth,
+      height: sourceHeight || height || customHeight,
     };
   };
 
@@ -190,153 +200,111 @@ export default function Increase() {
       setStatus("Preparing larger image...");
 
       const img = await loadImage(preview);
-
-      const targetBytes = Math.max(
-        1,
-        targetKB * 1024
-      );
-
+      const targetBytes = Math.max(10 * 1024, targetKB * 1024);
       const initial = getTargetDimensions();
 
-      let currentWidth = initial.width;
-      let currentHeight = initial.height;
+      let currentWidth = Math.max(100, Math.min(10000, Math.round(initial.width)));
+      let currentHeight = Math.max(100, Math.min(10000, Math.round(initial.height)));
 
-      /*
-        First try maximum practical quality.
-      */
-      let blob = await createBlob(
-        img,
-        currentWidth,
-        currentHeight,
-        100
-      );
+      let blob = await createBlob(img, currentWidth, currentHeight, quality);
+      if (!blob) throw new Error("Could not create output image.");
 
-      if (!blob) {
-        setStatus("Could not create output image.");
-        setProcessing(false);
-        return;
-      }
+      if (resizeMode === "auto" && blob.size < targetBytes) {
+        let lastSmallerBlob = blob;
+        let lastSmallerWidth = currentWidth;
+        let lastSmallerHeight = currentHeight;
+        let reachedTarget = false;
 
-      /*
-        For PNG, increase dimensions until target size is
-        reached because PNG does not have lossy quality control.
-      */
-      if (format === "image/png") {
-        for (
-          let i = 0;
-          i < 10 && blob.size < targetBytes;
-          i++
-        ) {
-          currentWidth = Math.round(currentWidth * 1.18);
-          currentHeight = Math.round(currentHeight * 1.18);
+        // Increase dimensions progressively while staying within practical limits.
+        for (let i = 0; i < 24; i++) {
+          const nextWidth = Math.min(10000, Math.max(currentWidth + 1, Math.round(currentWidth * 1.18)));
+          const nextHeight = Math.min(10000, Math.max(currentHeight + 1, Math.round(currentHeight * 1.18)));
 
-          const candidate = await createBlob(
-            img,
-            currentWidth,
-            currentHeight,
-            100
-          );
+          if (nextWidth === currentWidth && nextHeight === currentHeight) break;
 
+          const candidate = await createBlob(img, nextWidth, nextHeight, quality);
           if (!candidate) break;
 
+          currentWidth = nextWidth;
+          currentHeight = nextHeight;
           blob = candidate;
 
-          if (
-            currentWidth > 10000 ||
-            currentHeight > 10000
-          ) {
+          if (candidate.size >= targetBytes) {
+            reachedTarget = true;
             break;
           }
+
+          lastSmallerBlob = candidate;
+          lastSmallerWidth = currentWidth;
+          lastSmallerHeight = currentHeight;
+
+          if (currentWidth >= 10000 || currentHeight >= 10000) break;
         }
-      } else {
-        /*
-          JPEG/WebP:
-          1. Try quality 100.
-          2. If already above target, done.
-          3. Otherwise increase dimensions gradually.
-        */
-        if (blob.size < targetBytes) {
-          for (
-            let i = 0;
-            i < 12 && blob.size < targetBytes;
-            i++
-          ) {
-            currentWidth = Math.round(
-              currentWidth * 1.15
+
+        // Binary-search dimensions to get closer to the requested size.
+        if (reachedTarget) {
+          let lowScale = 1;
+          let highScale = 1.18;
+          let bestBlob = blob;
+          let bestWidth = currentWidth;
+          let bestHeight = currentHeight;
+
+          for (let i = 0; i < 8; i++) {
+            const scale = (lowScale + highScale) / 2;
+            const candidateWidth = Math.max(
+              lastSmallerWidth,
+              Math.min(currentWidth, Math.round((sourceWidth || initial.width) * scale))
+            );
+            const candidateHeight = Math.max(
+              lastSmallerHeight,
+              Math.min(currentHeight, Math.round((sourceHeight || initial.height) * scale))
             );
 
-            currentHeight = Math.round(
-              currentHeight * 1.15
-            );
-
-            const candidate = await createBlob(
-              img,
-              currentWidth,
-              currentHeight,
-              quality
-            );
-
+            const candidate = await createBlob(img, candidateWidth, candidateHeight, quality);
             if (!candidate) break;
 
-            blob = candidate;
-
-            if (
-              currentWidth > 10000 ||
-              currentHeight > 10000
-            ) {
-              break;
+            if (candidate.size >= targetBytes) {
+              bestBlob = candidate;
+              bestWidth = candidateWidth;
+              bestHeight = candidateHeight;
+              highScale = scale;
+            } else {
+              lowScale = scale;
             }
           }
+
+          blob = bestBlob;
+          currentWidth = bestWidth;
+          currentHeight = bestHeight;
+        } else {
+          blob = lastSmallerBlob;
+          currentWidth = lastSmallerWidth;
+          currentHeight = lastSmallerHeight;
         }
       }
 
-      /*
-        If user explicitly selected custom dimensions,
-        don't unexpectedly exceed them.
-      */
-      if (resizeMode === "custom") {
-        const customBlob = await createBlob(
-          img,
-          Math.max(100, customWidth),
-          Math.max(100, customHeight),
-          quality
-        );
-
-        if (customBlob) {
-          blob = customBlob;
-          currentWidth = Math.max(100, customWidth);
-          currentHeight = Math.max(
-            100,
-            customHeight
-          );
-        }
-      }
-
-      if (outputUrl) {
-        URL.revokeObjectURL(outputUrl);
-      }
+      if (outputUrl) URL.revokeObjectURL(outputUrl);
 
       const url = URL.createObjectURL(blob);
-
       setOutputBlob(blob);
       setOutputUrl(url);
-
       setWidth(currentWidth);
       setHeight(currentHeight);
 
       if (blob.size >= targetBytes) {
+        setStatus(`Done — output is ${formatBytes(blob.size)}.`);
+      } else if (resizeMode === "custom") {
         setStatus(
-          `Done — output is ${formatBytes(blob.size)}.`
+          `Created ${formatBytes(blob.size)} at the selected dimensions. Custom dimensions are fixed, so the target KB may not be reached.`
         );
       } else {
         setStatus(
-          `Maximum practical size reached: ${formatBytes(
-            blob.size
-          )}.`
+          `Maximum practical size reached: ${formatBytes(blob.size)}. This image/format may not reach the requested KB within browser-safe limits.`
         );
       }
-    } catch {
-      setStatus("Could not create the larger image.");
+    } catch (error) {
+      console.error("Increase image size failed:", error);
+      setStatus("Could not create the larger image. Try a smaller image or different format.");
     } finally {
       setProcessing(false);
     }
@@ -393,6 +361,8 @@ export default function Increase() {
 
     setWidth(0);
     setHeight(0);
+    setSourceWidth(0);
+    setSourceHeight(0);
 
     setResizeMode("auto");
 
@@ -407,32 +377,33 @@ export default function Increase() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c1d39] px-4 py-6 text-white">
+    <div className="min-h-screen bg-[#0c1d39] px-4 py-4 text-white">
       <div className="mx-auto w-full max-w-6xl">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-2">
+          <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-4 rounded-lg border border-[#303b4d] bg-[#172844] px-4 py-2 text-sm text-gray-200 transition hover:bg-[#213553]"
+            className="mb-1 rounded-lg border border-[#303b4d] bg-[#172844] px-1 py-0 text-sm text-gray-200 transition hover:bg-[#213553]"
           >
-            ← Back
+            ←Back
           </button>
 
-          <h1 className="text-2xl font-bold sm:text-3xl">
+          <h1 className="text-[18px] font-bold sm:text-3xl">
             Increase Image Size
           </h1>
+          </div>
 
-          <p className="mt-1 text-sm text-gray-400">
-            Increase an image's file size in KB while
-            maintaining the best practical quality.
+          <p className="mt-1 text-[12px] text-gray-400">
+            Increase image size in KB while maintaining best quality.
           </p>
         </div>
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* Preview */}
-          <section className="rounded-2xl border border-[#303b4d] bg-[#141f30] p-4 shadow-xl sm:p-6">
-            <div className="mb-4 flex items-center justify-between">
+          <section className="rounded-2xl border border-[#303b4d] bg-[#141f30] p-3 shadow-xl sm:p-6">
+            <div className="mb-2 flex items-center justify-between">
               <div>
                 <h2 className="font-semibold">
                   Preview
@@ -808,14 +779,58 @@ export default function Increase() {
                 : "Increase Image Size"}
             </button>
 
-            <button
-              type="button"
-              disabled={!outputBlob}
-              onClick={download}
-              className="mt-2 w-full rounded-lg border border-[#46566e] px-4 py-3 font-semibold text-white transition hover:bg-[#1d2b40] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Download Image
-            </button>
+  <button
+  type="button"
+  disabled={!outputBlob || isDownloading}
+  onClick={handleDownload}
+  className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-semibold text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
+    downloadSuccess
+      ? "border-green-500 bg-green-600 hover:bg-green-600"
+      : "border-[#46566e] hover:bg-[#1d2b40]"
+  }`}
+>
+  {isDownloading ? (
+    <>
+      <svg
+        className="h-5 w-5 animate-spin"
+        viewBox="0 0 24 24"
+        fill="none"
+      >
+        <circle
+          className="opacity-25"
+          cx="12"
+          cy="12"
+          r="10"
+          stroke="currentColor"
+          strokeWidth="4"
+        />
+        <path
+          className="opacity-90"
+          fill="currentColor"
+          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+        />
+      </svg>
+      Downloading...
+    </>
+  ) : downloadSuccess ? (
+    <>
+      <svg
+        className="h-5 w-5"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M5 12l4 4L19 6" />
+      </svg>
+      Downloaded Successfully
+    </>
+  ) : (
+    "Download Image"
+  )}
+</button>
           </aside>
         </div>
       </div>

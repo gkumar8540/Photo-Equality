@@ -1,7 +1,9 @@
 package com.photoequality.app;
 
 import android.Manifest;
+import android.app.AlertDialog;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -150,6 +152,55 @@ public class MainActivity extends BridgeActivity {
             } else {
                 // Denied ("Don't Allow") - gracefully do nothing, app will not crash
             }
+        }
+    }
+
+    @Override
+    public void onBackPressed() {
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            String currentUrl = getBridge().getWebView().getUrl();
+            boolean isHome = true;
+            if (currentUrl != null) {
+                try {
+                    Uri uri = Uri.parse(currentUrl);
+                    String path = uri.getPath();
+                    if (path != null && !path.equals("/") && !path.isEmpty()) {
+                        isHome = false;
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            }
+
+            if (isHome) {
+                // Main/Home page -> "Confirm Exit" popup with Confirm Exit button
+                new AlertDialog.Builder(this)
+                    .setTitle("Confirm Exit")
+                    .setMessage("Do you want to exit the app?")
+                    .setPositiveButton("Confirm Exit", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            finishAffinity();
+                        }
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+            } else {
+                // Other pages -> "Do you want to go back?" -> YES = previous page, NO = same page
+                new AlertDialog.Builder(this)
+                    .setTitle("Go Back")
+                    .setMessage("Do you want to go back?")
+                    .setPositiveButton("YES", new DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(DialogInterface dialog, int which) {
+                            getBridge().getWebView().evaluateJavascript("window.history.back()", null);
+                        }
+                    })
+                    .setNegativeButton("NO", null)
+                    .show();
+            }
+        } else {
+            super.onBackPressed();
         }
     }
 

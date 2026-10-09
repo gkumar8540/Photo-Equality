@@ -837,7 +837,7 @@ function PhotoEquality() {
       <button type="button" onClick={(event) => { event.stopPropagation();
       setShowAdjustments((value) => !value);}}
       className="flex w-full items-center justify-center gap-1 rounded-lg border border-[#30363d] bg-[#20252b] px-2 py-2 text-left sm:w-auto sm:justify-between sm:gap-3 sm:px-3">
-      <span className="text-[11px] font-bold text-[#eee7db] sm:text-[14px]">
+      <span className="text-[13px] font-bold text-[#eee7db] sm:text-[14px]">
       Adjust
       </span>
       <span className="text-[12px] text-[#8a8f8f]">
@@ -904,14 +904,14 @@ function PhotoEquality() {
            {/* Filters Button */}
         <button type="button"onClick={() => setIsLooksOpen((prev) => !prev)}
           className="flex w-full items-center justify-center text-left sm:w-auto">
-          <p className="block w-full rounded-lg border border-[#30363d] bg-[#DB2777] px-1.5 py-2 text-center text-[11px] font-bold text-[#eee7db] shadow-sm sm:w-auto sm:px-4 sm:text-[13px]">
+          <p className="block w-full rounded-lg border border-[#30363d] bg-[#DB2777] px-1.5 py-2 text-center text-[13px] font-bold text-[#eee7db] shadow-sm sm:w-auto sm:px-4 sm:text-[13px]">
           Filters
           </p>
        </button>
 
        {/* Filter Popup - Opens ABOVE Button */}
        {isLooksOpen && (
-     <div className="absolute bottom-full left-[-103px] z-[100] mb-1.5 w-[min(99vw,520px)]">
+     <div className="absolute bottom-full left-[-96px] z-[100] mb-1.5 w-[min(99vw,520px)]">
 
       {/* Filter Row */}
        <div className="w-full rounded-lg bg-[#0c1d39]/95 p-1.5">
