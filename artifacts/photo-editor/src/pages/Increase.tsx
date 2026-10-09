@@ -532,21 +532,23 @@ const handleDownload = async () => {
               </label>
 
               <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min="10"
-                  max="50000"
-                  value={targetKB}
-                  onChange={(e) =>
-                    setTargetKB(
-                      Math.max(
-                        10,
-                        Number(e.target.value)
-                      )
-                    )
-                  }
-                  className="w-full rounded-lg border border-[#3a4a60] bg-[#0d1929] px-3 py-2.5 text-sm text-white outline-none focus:border-[#f3ad61]"
-                />
+                
+<input
+  type="number"
+  min="10"
+  placeholder="Min-10"
+  max="50000"
+  value={targetKB === 0 ? "" : targetKB}
+  onChange={(e) =>
+    setTargetKB(
+      e.target.value === ""
+        ? 0
+        : Math.max(0, Math.min(50000, Number(e.target.value)))
+    )
+  }
+  className="w-full rounded-sm  bg-[#0d1929] px-3 py-2.5 text-sm text-white outline-none focus:border-[#f3ad61]"
+/>
+
 
                 <span className="text-sm text-gray-400">
                   KB
@@ -825,7 +827,7 @@ const handleDownload = async () => {
       >
         <path d="M5 12l4 4L19 6" />
       </svg>
-      Downloaded Successfully
+      Download Successfull
     </>
   ) : (
     "Download Image"

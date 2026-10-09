@@ -485,7 +485,7 @@ export default function Reduce() {
       e.target.value === "" ? 0 : Math.max(0, Number(e.target.value))
     )
   }
-  className="w-full rounded-xl bg-[#0d1929] p-3 outline-none"
+  className="w-full rounded-sm  bg-[#0d1929] p-3 outline-none"
 />
 
 
