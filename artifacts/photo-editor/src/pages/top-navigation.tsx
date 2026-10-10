@@ -70,6 +70,16 @@ type CropRect = {
   h: number;
 };
 
+type CropEdge =
+  | 'top-left'
+  | 'top'
+  | 'top-right'
+  | 'right'
+  | 'bottom-right'
+  | 'bottom'
+  | 'bottom-left'
+  | 'left';
+
 type PhotoTransform = {
   x: number;
   y: number;
@@ -243,8 +253,6 @@ const getPinchDistance = (
   const canvasAreaRef =
     useRef<HTMLDivElement | null>(null);
 
-  const cropFrameRef =
-    useRef<HTMLDivElement | null>(null);
   const photoTapRef = useRef<{
     photoId: number;
     time: number;
@@ -414,7 +422,8 @@ const textPinchRef = useRef<{
    * Crop starts exactly at the image edges.
    * This also makes the first crop feel natural.
    */
-  const [cropRect, setCropRect] =
+  const [
+    cropRect, setCropRect] =
     useState<CropRect>({
       x: 0,
       y: 0,
@@ -423,20 +432,10 @@ const textPinchRef = useRef<{
     });
 
   const cropInteractionRef = useRef<{
-    mode:
-      | 'move'
-      | 'draw'
-      | 'n'
-      | 'e'
-      | 's'
-      | 'w'
-      | 'nw'
-      | 'ne'
-      | 'sw'
-      | 'se';
-    startX: number;
-    startY: number;
-    original: CropRect;
+    type: 'draw' | 'resize';
+    edge?: CropEdge;
+    start: { x: number; y: number };
+    rect?: CropRect;
   } | null>(null);
 
   const [dragging, setDragging] =
@@ -769,10 +768,13 @@ const textPinchRef = useRef<{
   const startCrop = () => {
     if (!photo) return;
 
-    /*
-     * Always start a fresh crop from
-     * the complete image.
-     */
+    cropInteractionRef.current = null;
+    cropLatestPointRef.current = null;
+    if (cropAnimationFrameRef.current !== null) {
+      cancelAnimationFrame(cropAnimationFrameRef.current);
+      cropAnimationFrameRef.current = null;
+    }
+
     setCropRect({
       x: 0,
       y: 0,
@@ -784,46 +786,38 @@ const textPinchRef = useRef<{
     setActiveTool(null);
   };
 
-  const handleCropPointerDown = (
-    event: ReactPointerEvent<HTMLDivElement>,
-    mode:
-      | 'move'
-      | 'n'
-      | 'e'
-      | 's'
-      | 'w'
-      | 'nw'
-      | 'ne'
-      | 'sw'
-      | 'se'
+  const pointFromCropEvent = (
+    event: ReactPointerEvent<HTMLDivElement>
   ) => {
-    if (!canvasAreaRef.current) {
-      return;
-    }
+    const rect = event.currentTarget.getBoundingClientRect();
+    return {
+      x: clamp((event.clientX - rect.left) / rect.width, 0, 1),
+      y: clamp((event.clientY - rect.top) / rect.height, 0, 1),
+    };
+  };
 
+  const beginCrop = (
+    event: ReactPointerEvent<HTMLDivElement>
+  ) => {
+    event.currentTarget.setPointerCapture(event.pointerId);
+    cropInteractionRef.current = {
+      type: 'draw',
+      start: pointFromCropEvent(event),
+    };
+  };
+
+  const beginCropResize = (
+    event: ReactPointerEvent<HTMLDivElement>,
+    edge: CropEdge
+  ) => {
     event.preventDefault();
     event.stopPropagation();
-
-    /*
-     * Capture pointer on the actual crop stage.
-     * This prevents losing the crop handle
-     * while dragging quickly.
-     */
-    try {
-      canvasAreaRef.current.setPointerCapture(
-        event.pointerId
-      );
-    } catch {
-      // Ignore pointer capture errors.
-    }
-
+    event.currentTarget.setPointerCapture(event.pointerId);
     cropInteractionRef.current = {
-      mode,
-      startX: event.clientX,
-      startY: event.clientY,
-      original: {
-        ...cropRect,
-      },
+      type: 'resize',
+      edge,
+      start: { x: event.clientX, y: event.clientY },
+      rect: cropRect,
     };
   };
 
@@ -858,193 +852,76 @@ const textPinchRef = useRef<{
      * Convert mouse/touch movement into
      * exact percentage of the image stage.
      */
-    const dx =
-      ((clientX -
-        interaction.startX) /
-        rect.width) *
-      100;
+    const bounds = stage.getBoundingClientRect();
+    if (bounds.width <= 0 || bounds.height <= 0) return;
 
-    const dy =
-      ((clientY -
-        interaction.startY) /
-        rect.height) *
-      100;
+    if (interaction.type === 'resize' && interaction.rect && interaction.edge) {
+      const deltaX = ((clientX - interaction.start.x) / bounds.width) * 100;
+      const deltaY = ((clientY - interaction.start.y) / bounds.height) * 100;
+      const initial = interaction.rect;
+      const minimum = 3;
+      const next = { ...initial };
 
-    const original =
-      interaction.original;
+      if (interaction.edge.includes('left')) {
+        next.x = clamp(initial.x + deltaX, 0, initial.x + initial.w - minimum);
+        next.w = initial.x + initial.w - next.x;
+      }
+      if (interaction.edge.includes('right')) {
+        next.w = clamp(initial.w + deltaX, minimum, 100 - initial.x);
+      }
+      if (interaction.edge.includes('top')) {
+        next.y = clamp(initial.y + deltaY, 0, initial.y + initial.h - minimum);
+        next.h = initial.y + initial.h - next.y;
+      }
+      if (interaction.edge.includes('bottom')) {
+        next.h = clamp(initial.h + deltaY, minimum, 100 - initial.y);
+      }
 
-    const mode =
-      interaction.mode;
+      setCropRect(next);
+      return;
+    }
 
-    let next: CropRect = {
-      ...original,
+    if (interaction.type !== 'draw') return;
+
+    const point = {
+      x: clamp((clientX - bounds.left) / bounds.width, 0, 1),
+      y: clamp((clientY - bounds.top) / bounds.height, 0, 1),
     };
-
-    if (mode === 'move') {
-      next.x = clamp(
-        original.x + dx,
-        0,
-        100 - original.w
-      );
-
-      next.y = clamp(
-        original.y + dy,
-        0,
-        100 - original.h
-      );
-    }
-
-    if (mode === 'se') {
-      next.w = clamp(
-        original.w + dx,
-        1,
-        100 - original.x
-      );
-
-      next.h = clamp(
-        original.h + dy,
-        1,
-        100 - original.y
-      );
-    }
-
-    if (mode === 'nw') {
-      const right =
-        original.x +
-        original.w;
-
-      const bottom =
-        original.y +
-        original.h;
-
-      const nextX =
-        clamp(
-          original.x + dx,
-          0,
-          right - 1
-        );
-
-      const nextY =
-        clamp(
-          original.y + dy,
-          0,
-          bottom - 1
-        );
-
-      next.x = nextX;
-      next.y = nextY;
-      next.w =
-        right - nextX;
-      next.h =
-        bottom - nextY;
-    }
-
-    if (mode === 'ne') {
-      const right =
-        clamp(
-          original.x +
-            original.w +
-            dx,
-          original.x + 1,
-          100
-        );
-
-      const nextY =
-        clamp(
-          original.y + dy,
-          0,
-          original.y +
-            original.h -
-            1
-        );
-
-      next.y = nextY;
-      next.w =
-        right -
-        original.x;
-      next.h =
-        original.y +
-        original.h -
-        nextY;
-    }
-
-    if (mode === 'sw') {
-      const bottom =
-        clamp(
-          original.y +
-            original.h +
-            dy,
-          original.y + 1,
-          100
-        );
-
-      const nextX =
-        clamp(
-          original.x + dx,
-          0,
-          original.x +
-            original.w -
-            1
-        );
-
-      next.x = nextX;
-      next.w =
-        original.x +
-        original.w -
-        nextX;
-      next.h =
-        bottom -
-        original.y;
-    }
-
-    if (mode === 'n') {
-      const bottom = original.y + original.h;
-      next.y = clamp(original.y + dy, 0, bottom - 1);
-      next.h = bottom - next.y;
-    }
-
-    if (mode === 'e') {
-      next.w = clamp(original.w + dx, 1, 100 - original.x);
-    }
-
-    if (mode === 's') {
-      next.h = clamp(original.h + dy, 1, 100 - original.y);
-    }
-
-    if (mode === 'w') {
-      const right = original.x + original.w;
-      next.x = clamp(original.x + dx, 0, right - 1);
-      next.w = right - next.x;
-    }
-
-    /*
-     * Final safety clamp.
-     */
-    next.x = clamp(
-      next.x,
-      0,
-      100
+    const start = interaction.start;
+    const dragDistance = Math.hypot(
+      (point.x - start.x) * bounds.width,
+      (point.y - start.y) * bounds.height
     );
+    if (dragDistance < 6) return;
 
-    next.y = clamp(
-      next.y,
-      0,
-      100
-    );
+    let x = Math.min(start.x, point.x);
+    let y = Math.min(start.y, point.y);
+    let w = Math.abs(point.x - start.x);
+    let h = Math.abs(point.y - start.y);
 
-    next.w = clamp(
-      next.w,
-      1,
-      100 - next.x
-    );
+    if (start.x <= 0.02) {
+      x = 0;
+      w = Math.max(0.03, point.x);
+    }
+    if (start.x >= 0.98) {
+      x = point.x;
+      w = Math.max(0.03, 1 - x);
+    }
+    if (start.y <= 0.02) {
+      y = 0;
+      h = Math.max(0.03, point.y);
+    }
+    if (start.y >= 0.98) {
+      y = point.y;
+      h = Math.max(0.03, 1 - y);
+    }
 
-    next.h = clamp(
-      next.h,
-      1,
-      100 - next.y
-    );
-
-    setCropRect(next);
+    setCropRect({
+      x: clamp(x * 100, 0, 97),
+      y: clamp(y * 100, 0, 97),
+      w: clamp(w * 100, 3, 100 - clamp(x * 100, 0, 97)),
+      h: clamp(h * 100, 3, 100 - clamp(y * 100, 0, 97)),
+    });
   };
 
   const handlePointerMove = (
@@ -1333,6 +1210,18 @@ const textPinchRef = useRef<{
         },
       }));
 
+      cropInteractionRef.current = null;
+      cropLatestPointRef.current = null;
+      if (cropAnimationFrameRef.current !== null) {
+        cancelAnimationFrame(cropAnimationFrameRef.current);
+        cropAnimationFrameRef.current = null;
+      }
+      setCropRect({
+        x: 0,
+        y: 0,
+        w: 100,
+        h: 100,
+      });
       setIsCropping(false);
 
       setAdjustments(
@@ -3337,6 +3226,7 @@ const handleTextPointerUp = (
         <main className="flex min-h-0 flex-1 items-center justify-center overflow-hidden p-5 sm:p-6">
           <div
             ref={canvasAreaRef}
+            onPointerDown={beginCrop}
             onPointerMove={
               handlePointerMove
             }
@@ -3357,16 +3247,8 @@ const handleTextPointerUp = (
             <div className="pointer-events-none absolute inset-0 bg-black/35" />
 
             <div
-              ref={cropFrameRef}
-              onPointerDown={(
-                event
-              ) =>
-                handleCropPointerDown(
-                  event,
-                  'move'
-                )
-              }
-              className="absolute cursor-move border-2 border-white bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]"
+              onPointerDown={(event) => event.stopPropagation()}
+              className="absolute border-2 border-white bg-transparent shadow-[0_0_0_9999px_rgba(0,0,0,0.38)]"
               style={{
                 left: `${cropRect.x}%`,
                 top: `${cropRect.y}%`,
@@ -3390,34 +3272,30 @@ const handleTextPointerUp = (
                 <div />
               </div>
 
-              {(
+              {              (
                 [
-  ['n', 'left-[-2px] right-[-2px] top-[-2px] h-1 cursor-ns-resize'],
-  ['e', 'right-[-2px] top-[-2px] bottom-[-2px] w-1 cursor-ew-resize'],
-  ['s', 'left-[-2px] right-[-2px] bottom-[-2px] h-1 cursor-ns-resize'],
-  ['w', 'left-[-2px] top-[-2px] bottom-[-2px] w-1 cursor-ew-resize'],
-
-  ['nw', 'left-[-2px] top-[-2px] h-2 w-2 cursor-nwse-resize'],
-  ['ne', 'right-[-2px] top-[-2px] h-2 w-2 cursor-nesw-resize'],
-  ['sw', 'left-[-2px] bottom-[-2px] h-2 w-2 cursor-nesw-resize'],
-  ['se', 'right-[-2px] bottom-[-2px] h-2 w-2 cursor-nwse-resize'],
+  ['top-left', 'left-[-2px] top-[-2px] h-2 w-2 cursor-nwse-resize'],
+  ['top', 'left-[-2px] right-[-2px] top-[-2px] h-1 cursor-ns-resize'],
+  ['top-right', 'right-[-2px] top-[-2px] h-2 w-2 cursor-nesw-resize'],
+  ['right', 'right-[-2px] top-[-2px] bottom-[-2px] w-1 cursor-ew-resize'],
+  ['bottom-right', 'right-[-2px] bottom-[-2px] h-2 w-2 cursor-nwse-resize'],
+  ['bottom', 'left-[-2px] right-[-2px] bottom-[-2px] h-1 cursor-ns-resize'],
+  ['bottom-left', 'left-[-2px] bottom-[-2px] h-2 w-2 cursor-nesw-resize'],
+  ['left', 'left-[-2px] top-[-2px] bottom-[-2px] w-1 cursor-ew-resize'],
   ] as const
               ).map(
                 ([
-                  mode,
+                  edge,
                   position,
                 ]) => (
                   <div
-                    key={mode}
+                    key={edge}
                     onPointerDown={(
                       event
                     ) => {
-                      event.preventDefault();
-                      event.stopPropagation();
-
-                      handleCropPointerDown(
+                      beginCropResize(
                         event,
-                        mode
+                        edge
                       );
                     }}
                     className={`absolute ${position} touch-none rounded-sm border-2 border-white bg-[#ffffff] shadow-lg`}

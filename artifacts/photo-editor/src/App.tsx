@@ -11,6 +11,7 @@ import Passport from "./pages/Passport";
 import Reduce from "./pages/Reduce";
 import Increase from "./pages/Increase";
 import RemoveBg from "./pages/RemoveBg";
+import TimeTravel from "./pages/TimeTravel";
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
@@ -1164,6 +1165,7 @@ function App() {
         <Route path="/images/reduce" component={Reduce} />
         <Route path="/images/increase" component={Increase} />
         <Route path="/images/remove-bg" component={RemoveBg} />
+        <Route path="/images/Time-Travel" component={TimeTravel} />
 
         <Route component={NotFound} />
       </Switch>

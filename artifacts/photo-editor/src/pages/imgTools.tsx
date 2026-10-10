@@ -29,6 +29,12 @@ export default function ImgTools() {
       icon: "📈",
       path: "/images/increase",
     },
+    {
+      title: "Time Travel",
+      subtitle: "Retro Looks",
+      icon: "⏳",
+      path: "/images/Time-Travel",
+    },
     
   ];
 

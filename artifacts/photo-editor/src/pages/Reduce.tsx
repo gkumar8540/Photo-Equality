@@ -487,8 +487,6 @@ export default function Reduce() {
   }
   className="w-full rounded-sm  bg-[#0d1929] p-3 outline-none"
 />
-
-
                   <div className="mt-3 grid grid-cols-4 gap-2">
                     {[50, 100, 200, 500].map((n) => (
                       <button

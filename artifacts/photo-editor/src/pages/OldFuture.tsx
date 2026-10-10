@@ -14,7 +14,8 @@ type PanelId =
   | "background"
   | "frame"
   | "text"
-  | "year";
+  | "year"
+  | "size";
 
 type PhotoItem = {
   id: number;
@@ -38,6 +39,16 @@ type TextItem = {
 
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 1200;
+
+const OUTPUT_SIZES = [
+  { id: "9:16", width: 1080, height: 1920 },
+  { id: "16:9", width: 1920, height: 1080 },
+  { id: "1:1", width: 1080, height: 1080 },
+  { id: "4:5", width: 1080, height: 1350 },
+  { id: "3:4", width: 1080, height: 1440 },
+  { id: "4:3", width: 1440, height: 1080 },
+  { id: "3:2", width: 1620, height: 1080 },
+];
 
 const templates = {
   thennow: {
@@ -74,6 +85,11 @@ export default function OldFuturePage() {
   const [activePhoto, setActivePhoto] = useState(0);
 
   const [panel, setPanel] = useState<PanelId>("template");
+  const [outputSize, setOutputSize] = useState({
+    id: "1:1",
+    width: CANVAS_WIDTH,
+    height: CANVAS_HEIGHT,
+  });
 
   const [background, setBackground] = useState("#10141c");
   const [frame, setFrame] = useState("none");
@@ -261,6 +277,11 @@ export default function OldFuturePage() {
     setActivePhoto(0);
     setBackground("#10141c");
     setFrame("none");
+    setOutputSize({
+      id: "1:1",
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+    });
     setGlobalGrain(0);
     setGlobalGlow(0);
     setTitle("THEN → Now");
@@ -300,14 +321,20 @@ export default function OldFuturePage() {
     if (!canvas) return null;
 
     const rect = canvas.getBoundingClientRect();
+    const sceneScale = Math.min(
+      canvas.width / CANVAS_WIDTH,
+      canvas.height / CANVAS_HEIGHT,
+    );
+    const offsetX = (canvas.width - CANVAS_WIDTH * sceneScale) / 2;
+    const offsetY = (canvas.height - CANVAS_HEIGHT * sceneScale) / 2;
+    const canvasX =
+      ((event.clientX - rect.left) / rect.width) * canvas.width;
+    const canvasY =
+      ((event.clientY - rect.top) / rect.height) * canvas.height;
 
     return {
-      x:
-        ((event.clientX - rect.left) / rect.width) *
-        CANVAS_WIDTH,
-      y:
-        ((event.clientY - rect.top) / rect.height) *
-        CANVAS_HEIGHT,
+      x: (canvasX - offsetX) / sceneScale,
+      y: (canvasY - offsetY) / sceneScale,
     };
   };
 
@@ -544,15 +571,21 @@ export default function OldFuturePage() {
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    ctx.fillStyle = background;
-    ctx.fillRect(
-      0,
-      0,
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
+    const outputWidth = canvas.width;
+    const outputHeight = canvas.height;
+    const sceneScale = Math.min(
+      outputWidth / CANVAS_WIDTH,
+      outputHeight / CANVAS_HEIGHT,
     );
+    const offsetX = (outputWidth - CANVAS_WIDTH * sceneScale) / 2;
+    const offsetY = (outputHeight - CANVAS_HEIGHT * sceneScale) / 2;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, outputWidth, outputHeight);
+    ctx.fillStyle = background;
+    ctx.fillRect(0, 0, outputWidth, outputHeight);
+    ctx.save();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(sceneScale, sceneScale);
 
     const currentPhotos = photos;
 
@@ -560,11 +593,7 @@ export default function OldFuturePage() {
       ctx.fillStyle = "rgba(255,255,255,0.45)";
       ctx.textAlign = "center";
       ctx.font = "bold 40px Arial";
-      ctx.fillText(
-        "UPLOAD PHOTO",
-        CANVAS_WIDTH / 2,
-        CANVAS_HEIGHT / 2,
-      );
+      ctx.fillText("UPLOAD PHOTO", CANVAS_WIDTH / 2, CANVAS_HEIGHT / 2);
     } else {
       const loadedImages: {
         photo: PhotoItem;
@@ -660,19 +689,11 @@ export default function OldFuturePage() {
 
     ctx.fillStyle = "#ffffff";
     ctx.font = "bold 64px Arial";
-    ctx.fillText(
-      title,
-      CANVAS_WIDTH / 2,
-      75,
-    );
+    ctx.fillText(title, CANVAS_WIDTH / 2, 75);
 
     ctx.fillStyle = "#9da7b5";
     ctx.font = "32px Arial";
-    ctx.fillText(
-      subtitle,
-      CANVAS_WIDTH / 2,
-      125,
-    );
+    ctx.fillText(subtitle, CANVAS_WIDTH / 2, 125);
 
     // Divider
     ctx.strokeStyle =
@@ -711,11 +732,7 @@ export default function OldFuturePage() {
         item.bold ? "bold " : ""
       }${item.size}px Arial`;
 
-      ctx.fillText(
-        item.text,
-        item.x,
-        item.y,
-      );
+      ctx.fillText(item.text, item.x, item.y);
 
       ctx.restore();
     }
@@ -811,11 +828,13 @@ export default function OldFuturePage() {
 
       ctx.restore();
     }
+    ctx.restore();
   }, [
     background,
     frame,
     globalGlow,
     globalGrain,
+    outputSize,
     photos,
     template,
     textItems,
@@ -1013,9 +1032,9 @@ export default function OldFuturePage() {
   return (
     <TopNavigation>
   
-    <div className="min-h-screen bg-[#15191f] text-white">
-
-      <main className="mx-auto w-full max-w-[1450px] px-2 pb-6 pt-3 sm:px-4">
+   
+  <div className="min-h-screen w-full bg-[#15191f] text-white">
+     <main className="mx-auto w-full max-w-none px-2 pb-6 pt-3 sm:px-4">
         {/* HEADER */}
         <div className="mb-1.5 rounded-xl border border-white/10 bg-[#20242c] p-2">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1023,8 +1042,7 @@ export default function OldFuturePage() {
   <button
     type="button"
     onClick={uploadClick}
-    className="w-fit min-h-10 rounded-lg bg-[#f3ad61] px-4 text-sm font-bold text-black transition hover:brightness-110 active:scale-[0.98]"
-  >
+    className="w-fit min-h-7 rounded-lg bg-[#f3ad61] px-4 text-sm font-bold text-black transition hover:brightness-110 active:scale-[0.98]">
     + Add Photo
   </button>
 
@@ -1053,7 +1071,7 @@ export default function OldFuturePage() {
         <div className="grid gap-3 lg:grid-cols-[250px_minmax(0,1fr)_280px]">
           {/* LEFT */}
           <aside className="order-2 rounded-xl border border-white/10 bg-[#20242c] p-2 lg:order-1">
-            <div className="grid grid-cols-3 gap-1.5 lg:grid-cols-1">
+            <div className="grid grid-cols-4 gap-1.5 lg:grid-cols-1">
               <button
                 onClick={() => openPanel("template")}
                 className={`rounded-lg px-2 py-3 text-xs font-semibold ${
@@ -1061,8 +1079,9 @@ export default function OldFuturePage() {
                     ? "bg-[#f3ad61] text-black"
                     : "bg-white/5 text-white/80"
                 }`}
-              >
+              > <p className="text-[12px] font-bold">
                 Templates
+                </p>
               </button>
 
               <button
@@ -1082,9 +1101,9 @@ export default function OldFuturePage() {
                   panel === "background"
                     ? "bg-[#f3ad61] text-black"
                     : "bg-white/5 text-white/80"
-                }`}
-              >
-                Background
+                }`}>
+                <p className="text-[10px] font-bold">
+                  Background</p>
               </button>
 
               <button
@@ -1119,7 +1138,46 @@ export default function OldFuturePage() {
               >
                 Years
               </button>
-            </div>
+
+              <button
+                onClick={() => openPanel("size")}
+                className={`rounded-lg px-2 py-3 text-xs font-semibold ${
+                  panel === "size"
+                    ? "bg-[#f3ad61] text-black"
+                    : "bg-white/5 text-white/80"
+                }`}
+              >
+                Size
+              </button>
+              </div>
+
+              {panel === "size" && (
+                <div className="w-full min-w-0 space-y-2 overflow-hidden">
+                  <div className="mt-1 ml-1 text-xs font-bold text-white/60">
+                    Choose output Ratio
+                  </div>
+                  <div className="flex w-75 min-w-0 ml-3 flex-nowrap gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain whitespace-nowrap pb-1 scrollbar-hide">
+                    {OUTPUT_SIZES.map((size) => (
+                      <button
+                        key={size.id}
+                        type="button"
+                        onClick={() => setOutputSize(size)}
+                        className={`min-w-[92px] shrink-0 rounded-lg border px-3 py-2 text-center ${
+                          outputSize.id === size.id
+                            ? "border-[#f3ad61] bg-[#f3ad61] text-black"
+                            : "border-white/10 bg-[#2b3238] text-white"
+                        }`}
+                      >
+                        <div className="text-sm font-bold">{size.id}</div>
+                        <div className="text-[9px] opacity-60">
+                          {size.width} × {size.height}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            
 
             <div className="mt-2">
               {/* TEMPLATE */}
@@ -1545,23 +1603,31 @@ export default function OldFuturePage() {
                   </p>
                 </div>
               )}
+
+             
             </div>
           </aside>
 
           {/* CENTER CANVAS */}
           <section className="order-1 min-w-0 lg:order-2">
             <div className="overflow-hidden rounded-xl border border-white/10 bg-[#0c0f14] p-2 shadow-xl sm:p-3">
-              <div className="mx-auto w-full max-w-[720px]">
+              <div
+                className="relative mx-auto max-w-full overflow-hidden"
+                style={{
+                  width: `min(100%, 720px, calc(100vw - 32px), ${(outputSize.width / outputSize.height) * 65}dvh)`,
+                  aspectRatio: `${outputSize.width} / ${outputSize.height}`,
+                }}
+              >
                 <canvas
                   ref={canvasRef}
-                  width={CANVAS_WIDTH}
-                  height={CANVAS_HEIGHT}
+                  width={outputSize.width}
+                  height={outputSize.height}
                   onPointerDown={startDrag}
                   onPointerMove={moveDrag}
                   onPointerUp={stopDrag}
                   onPointerCancel={stopDrag}
                   onPointerLeave={stopDrag}
-                  className="block h-auto w-full touch-none rounded-lg"
+                  className="absolute inset-0 block h-full w-full touch-none rounded-lg"
                 />
               </div>
 
@@ -1649,7 +1715,7 @@ export default function OldFuturePage() {
               </div>
             </div>
 
-            <div className="mt-3 rounded-xl bg-white/5 p-3 text-[11px] leading-5 text-white/45">
+            <div className="mt-3 mb-5 rounded-xl bg-white/5 p-3 text-[11px] leading-5 text-white/45">
               <div className="font-bold text-white/70">
                 Quick controls
               </div>
@@ -1676,7 +1742,7 @@ export default function OldFuturePage() {
         </div>
 
         {/* BOTTOM ACTION BAR */}
-        <div className="fixed bottom-0 w-87 left-1/2 z-20 -translate-x-1/2 rounded-0 border border-white/10 bg-[#20242c]/95 p-1 shadow-2xl backdrop-blur">
+        <div className="fixed bottom-0 rounded-sm w-full left-1/2 z-20 -translate-x-1/2 rounded-0 border border-white/10 bg-[#20242c]/95 p-1 shadow-2xl backdrop-blur">
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
             <button
               onClick={resetAll}
