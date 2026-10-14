@@ -3167,7 +3167,7 @@ const handleTextPointerUp = (
    * They no longer push the editor/export area.
    */
   const overlayPanelClass =
-   'fixed left-2 right-2 bottom-[87px] z-[9999] mx-auto w-auto max-w-[760px] max-h-[70vh] overflow-y-auto rounded-xl border border-white/10 bg-[#20242c] p-3 shadow-2xl';
+   'fixed left-2 right-2 bottom-[87px] z-[9999] mx-auto w-auto max-w-[760px] max-h-[70vh] overflow-y-auto rounded-xl border border-white/10 bg-[#20242c] pl-3 pb-3 pr-3 pt-1 shadow-2xl';
   /*
    * Compact action bar stays above footer.
    * It remains visible even while a popup is open.
@@ -4130,7 +4130,7 @@ const handleTextPointerUp = (
       }}
       rows={2}
       placeholder="Type your text..."
-      className="w-full resize-none rounded-lg border border-white/10 bg-[#161a1f] px-2 py-1.5 text-xs text-white outline-none focus:border-[#f3ad61]"
+      className="w-full resize-none rounded-lg border border-white/10 bg-[#161a1f] px-2 py-3 text-xs text-white outline-none focus:border-[#f3ad61]"
     />
 
     {/* BASIC FORMAT */}
