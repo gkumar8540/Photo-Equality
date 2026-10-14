@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { removeBackground } from "@imgly/background-removal";
 
+
 function formatBytes(bytes: number) {
   if (!bytes) return "0 KB";
 
@@ -15,6 +16,7 @@ export default function RemoveBg() {
   const [file, setFile] = useState<File | null>(null);
   const [originalUrl, setOriginalUrl] = useState("");
   const [resultUrl, setResultUrl] = useState("");
+  const [downloadComplete, setDownloadComplete] = useState(false);
 
   const [resultBlob, setResultBlob] = useState<Blob | null>(
     null
@@ -391,16 +393,15 @@ export default function RemoveBg() {
       : resultWithBackground || resultUrl;
 
   return (
-    <div className="min-h-screen w-full min-w-0 bg-[#0c1d39] px-4 py-4 text-white">
+    <div className="min-h-screen w-full min-w-0 bg-[#0c1d39] px-2 py-2 text-white">
       <div className="mx-auto w-full min-w-0 max-w-6xl">
         {/* Header */}
-        <div className="mb-4">
+        <div className="mb-1.5">
         <div className="flex items-center gap-4">
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-0 rounded-lg border border-[#303b4d] bg-[#172844] px-1 py-0 text-sm text-gray-200 transition hover:bg-[#213553]"
-          >
+            className="mb-0 rounded-lg border border-[#303b4d] bg-[#20252b] px-1 py-0 text-sm text-gray-200 transition hover:bg-[#213553]">
             ← Back
           </button>
 
@@ -417,9 +418,9 @@ export default function RemoveBg() {
 
         <div className="grid w-full min-w-0 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           {/* Preview */}
-          <section className="w-full min-w-0 rounded-2xl border border-[#303b4d] bg-[#141f30] p-3 shadow-xl sm:p-6">
+          <section className="w-full min-w-0 rounded-2xl border border-[#303b4d] bg-[#141f30] p-1.5 shadow-xl sm:p-6">
             <div className="mb-1 flex items-center justify-between">
-              <div>
+              <div className="flex gap-3">
                 <h2 className="font-semibold">
                   Preview
                 </h2>
@@ -441,7 +442,7 @@ export default function RemoveBg() {
             </div>
 
             <div
-              className="flex min-h-[460px] items-center justify-center rounded-xl border border-[#303b4d] p-4"
+              className="flex min-h-[460px] items-center justify-center rounded-xl border border-[#303b4d] p-2"
               style={{
                 backgroundImage:
                   "linear-gradient(45deg, #182538 25%, transparent 25%), linear-gradient(-45deg, #182538 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #182538 75%), linear-gradient(-45deg, transparent 75%, #182538 75%)",
@@ -487,7 +488,7 @@ export default function RemoveBg() {
                         Original
                       </p>
 
-                      <div className="flex min-h-[320px] items-center justify-center rounded-lg bg-[#0d1827] p-3">
+                      <div className="flex min-h-[320px] items-center justify-center rounded-lg bg-[#0d1827] p-2">
                         <img
                           src={originalUrl}
                           alt="Original"
@@ -502,7 +503,7 @@ export default function RemoveBg() {
                         Background Removed
                       </p>
 
-                      <div className="flex min-h-[320px] items-center justify-center rounded-lg bg-[#0d1827] p-3">
+                      <div className="flex min-h-[320px] items-center justify-center rounded-lg bg-[#000000] p-3">
                         {displayResult ? (
                           <img
                             src={displayResult}
@@ -533,7 +534,7 @@ export default function RemoveBg() {
                     <button
                       type="button"
                       onClick={reset}
-                      className="rounded-lg border border-[#46566e] px-4 py-2 text-sm text-gray-200 hover:bg-[#1d2b40]"
+                      className="rounded-lg border border-[#46566e] bg-[#4B5563] px-4 py-2 text-sm text-gray-200 hover:bg-[#1d2b40]"
                     >
                       Reset
                     </button>
@@ -564,22 +565,22 @@ export default function RemoveBg() {
                   />
                 </div>
 
-                <p className="mt-2 text-xs text-gray-500">
+                {/*<p className="mt-2 text-xs text-gray-500">
                   First run may take longer 
                   while the AI model loads.
-                </p>
+                </p>*/}
               </div>
             )}
 
             {status && !processing && (
-              <div className="mt-4 rounded-lg border border-[#34445b] bg-[#101b2b] px-4 py-3 text-sm text-gray-300">
+              <div className="mt-4 rounded-lg border border-[#34445b] bg-[#101b2b] px-4 py-3 text-sm text-green-300">
                 {status}
               </div>
             )}
           </section>
 
           {/* Controls */}
-          <aside className="w-full min-w-0 rounded-2xl border border-[#303b4d] bg-[#141f30] p-4 shadow-xl sm:p-5">
+          <aside className="w-full min-w-0 mb-16 rounded-2xl border border-[#303b4d] bg-[#141f30] p-4 shadow-xl sm:p-5">
             <h2 className="mb-2 text-lg font-semibold">
               Background Settings
             </h2>
@@ -818,39 +819,70 @@ export default function RemoveBg() {
             </div>
 
             {/* Privacy note */}
-            <div className="mb-5 rounded-lg border border-[#30415a] bg-[#0e1a2a] p-3 text-xs text-gray-400">
+            <div className="mb-1 rounded-lg border border-[#30415a] bg-[#0e1a2a] p-3 text-xs text-gray-400">
               <strong className="text-gray-300">
                 Processing:
               </strong>{" "}
               The background-removal processing runs in
-              the browser using the installed AI model.
+              the browser using AI model.
             </div>
 
-            {/* Main button */}
-            <div className="flex flex-row gap-2">
-            <button
-              type="button"
-              disabled={!file || processing}
-              onClick={processBackground}
-              className="flex items-center justify-centerw-full h-15 rounded-lg bg-[#f3ad61] px-4 py-3 font-semibold text-[#111827] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40">
-              {processing
-                ? `Removing Background... ${progress}%`
-                : "Remove Background"}
-            </button>
 
-            {/* Download */}
-            <button
-              type="button"
-              disabled={!resultUrl}
-              onClick={download}
-              className="mt-0 w-full h-15 rounded-lg border border-[#46566e] px-4 py-3 font-semibold text-white transition hover:bg-[#1d2b40] disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              Download PNG
-            </button>
-            </div>
           </aside>
         </div>
       </div>
+      
+{/* Footer */}
+<footer className="fixed bottom-0 left-0 z-50 mt-auto w-full border-t border-[#263449] bg-[#1C1C1C] p-2 sm:p-4">
+  <div className="mx-auto flex w-full max-w-5xl flex-row gap-2 sm:gap-4">
+
+    {/* Remove Background */}
+    <button
+      type="button"
+      disabled={!file || processing}
+      onClick={processBackground}
+      className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-[#f3ad61] px-3 py-0 text-center text-xs font-semibold text-[#111827] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+    >
+      {processing
+        ? `Removing.. ${progress}%`
+        : "Remove Background"}
+    </button>
+
+  {/* Download */}
+    <button type="button"disabled={!resultUrl} onClick={async () => {
+  setDownloadComplete(false);
+
+  try {
+    await download();
+    setDownloadComplete(true);
+
+    setTimeout(() => {
+      setDownloadComplete(false);
+    }, 2000);
+  } catch (error) {
+    setDownloadComplete(false);
+    console.error("Download failed:", error);
+  }
+}}
+  className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border px-3 py-0 text-center text-xs font-semibold transition sm:text-sm ${
+    downloadComplete
+      ? "border-[#22C55E] bg-[#22C55E] text-white"
+      : "border-[#46566e] bg-[#17202d] text-white hover:bg-[#1d2b40]"
+  } disabled:cursor-not-allowed disabled:opacity-40`}
+>
+  {downloadComplete ? (
+    <>
+      Complete <span className="text-base">✓</span>
+    </>
+  ) : (
+    "Download PNG"
+  )}
+</button>
+
+
+  </div>
+</footer>
+
     </div>
   );
 }

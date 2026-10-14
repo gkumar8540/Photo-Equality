@@ -500,7 +500,7 @@ export default function Passport() {
         <button
             type="button"
             onClick={() => window.history.back()}
-            className=" rounded-lg  px-0 py-0.5 text-sm text-gray-200 transition hover:bg-[#213553]"
+            className=" rounded-lg border-1 px-1 py-0.5 text-sm text-gray-200 transition hover:bg-[#213553]"
           >
            <span className="text-[24px] font-bold leading-none">←</span>
           </button>

@@ -285,14 +285,14 @@ export default function Reduce() {
   };
 
   return (
-    <div className="h-screen overflow-hidden bg-[#0c1d39] px-3 py-3 text-white">
+    <div className="h-screen overflow-hidden bg-[#0c1d39] px-3 py-2 text-white">
       <div className="mx-auto flex h-full max-w-4xl flex-col">
         {/* Header */}
         <div className="flex shrink-0 items-center justify-between py-2">
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="rounded-lg border border-[#35445a] px-1 py-0 text-sm"
+            className="rounded-lg border border-[#35445a] bg-[#20252b] px-1 py-0 text-sm"
           >
             ←Back
           </button>
@@ -306,7 +306,7 @@ export default function Reduce() {
 
         {/* Preview */}
         <div className="flex min-h-0 flex-1 items-center justify-center">
-          <div className="flex h-[min(62vh,560px)] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34445b] bg-[#101a29] p-4">
+          <div className="flex h-[min(67vh,560px)] w-full items-center justify-center overflow-hidden rounded-2xl border border-[#34445b] bg-[#101a29] p-2">
             {!url ? (
               <label className="cursor-pointer rounded-xl border-2 border-dashed border-[#46566e] px-8 py-12 text-center">
                 <div className="text-5xl">📉</div>

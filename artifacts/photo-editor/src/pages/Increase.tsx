@@ -292,7 +292,7 @@ const handleDownload = async () => {
       setHeight(currentHeight);
 
       if (blob.size >= targetBytes) {
-        setStatus(`Done — output is ${formatBytes(blob.size)}.`);
+        setStatus(`Done — output is- ${formatBytes(blob.size)}.`);
       } else if (resizeMode === "custom") {
         setStatus(
           `Created ${formatBytes(blob.size)} at the selected dimensions. Custom dimensions are fixed, so the target KB may not be reached.`
@@ -377,7 +377,7 @@ const handleDownload = async () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#0c1d39] px-4 py-4 text-white">
+    <div className="min-h-screen bg-[#0c1d39] px-2 py-3 text-white">
       <div className="mx-auto w-full max-w-6xl">
         {/* Header */}
         <div className="mb-2">
@@ -385,7 +385,7 @@ const handleDownload = async () => {
           <button
             type="button"
             onClick={() => window.history.back()}
-            className="mb-1 rounded-lg border border-[#303b4d] bg-[#172844] px-1 py-0 text-sm text-gray-200 transition hover:bg-[#213553]"
+            className="mb-1 rounded-lg border border-[#303b4d] bg-[#20252b] px-1 py-0 text-sm text-gray-200 transition hover:bg-[#213553]"
           >
             ←Back
           </button>
@@ -402,9 +402,9 @@ const handleDownload = async () => {
 
         <div className="grid gap-6 lg:grid-cols-[1fr_360px]">
           {/* Preview */}
-          <section className="rounded-2xl border border-[#303b4d] bg-[#141f30] p-3 shadow-xl sm:p-6">
-            <div className="mb-2 flex items-center justify-between">
-              <div>
+          <section className="rounded-2xl border border-[#303b4d] bg-[#141f30] p-1 px-0 shadow-xl sm:p-6">
+            <div className="mb-1.5 flex items-center justify-between">
+              <div className="flex ml-2 gap-3">
                 <h2 className="font-semibold">
                   Preview
                 </h2>
@@ -417,13 +417,13 @@ const handleDownload = async () => {
               </div>
 
               {outputBlob && (
-                <span className="rounded-full bg-[#173a2b] px-3 py-1 text-xs text-green-300">
+                <span className="rounded-full bg-[#173a2b] mr-2 px-3 py-1 text-xs text-green-300">
                   {formatBytes(outputBlob.size)}
                 </span>
               )}
             </div>
 
-            <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-[#303b4d] bg-[#0a1424] p-4">
+            <div className="flex min-h-[420px] items-center justify-center rounded-xl border border-[#303b4d] bg-[#0a1424] p-1">
               {!preview ? (
                 <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-[#46566e] px-8 py-16 text-center transition hover:border-[#f3ad61]">
                   <div className="mb-4 text-5xl">
@@ -454,7 +454,7 @@ const handleDownload = async () => {
                 <div className="w-full">
                   <div className="grid gap-4 md:grid-cols-2">
                     <div>
-                      <p className="mb-2 text-xs text-gray-400">
+                      <p className="mb-1.5 text-xs text-gray-400">
                         Original
                       </p>
 
@@ -472,7 +472,7 @@ const handleDownload = async () => {
                         Increased
                       </p>
 
-                      <div className="flex min-h-[300px] items-center justify-center rounded-lg bg-[#111b2a] p-3">
+                      <div className="flex min-h-[300px] items-center justify-center rounded-lg bg-[#111b2a] p-2">
                         {outputUrl ? (
                           <img
                             src={outputUrl}
@@ -520,8 +520,8 @@ const handleDownload = async () => {
           </section>
 
           {/* Controls */}
-          <aside className="rounded-2xl border border-[#303b4d] bg-[#141f30] p-4 shadow-xl sm:p-5">
-            <h2 className="mb-5 text-lg font-semibold">
+          <aside className="rounded-2xl mb-15 border border-[#303b4d] bg-[#141f30] p-4 shadow-xl sm:p-5">
+            <h2 className="mb-3 text-lg font-semibold">
               Size Settings
             </h2>
 
@@ -768,72 +768,81 @@ const handleDownload = async () => {
               </div>
             </div>
 
-            {/* Actions */}
-            <button
-              type="button"
-              disabled={!file || processing}
-              onClick={increaseImage}
-              className="w-full rounded-lg bg-[#f3ad61] px-4 py-3 font-semibold text-[#111827] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40"
-            >
-              {processing
-                ? "Creating..."
-                : "Increase Image Size"}
-            </button>
-
-  <button
-  type="button"
-  disabled={!outputBlob || isDownloading}
-  onClick={handleDownload}
-  className={`mt-2 flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 font-semibold text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 ${
-    downloadSuccess
-      ? "border-green-500 bg-green-600 hover:bg-green-600"
-      : "border-[#46566e] hover:bg-[#1d2b40]"
-  }`}
->
-  {isDownloading ? (
-    <>
-      <svg
-        className="h-5 w-5 animate-spin"
-        viewBox="0 0 24 24"
-        fill="none"
-      >
-        <circle
-          className="opacity-25"
-          cx="12"
-          cy="12"
-          r="10"
-          stroke="currentColor"
-          strokeWidth="4"
-        />
-        <path
-          className="opacity-90"
-          fill="currentColor"
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-        />
-      </svg>
-      Downloading...
-    </>
-  ) : downloadSuccess ? (
-    <>
-      <svg
-        className="h-5 w-5"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M5 12l4 4L19 6" />
-      </svg>
-      Download Successfull
-    </>
-  ) : (
-    "Download Image"
-  )}
-</button>
+            
           </aside>
         </div>
+        
+{/* Fixed Footer */}
+<footer className="fixed bottom-0 left-0 z-50 w-full border-t border-[#303030] bg-[#1C1C1C] p-2 sm:p-4">
+  <div className="mx-auto flex w-full max-w-5xl flex-row gap-2 sm:gap-4">
+
+    {/* Increase Image Size */}
+    <button
+      type="button"
+      disabled={!file || processing}
+      onClick={increaseImage}
+      className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-[#f3ad61] px-2 py-0 text-center text-xs font-semibold text-[#111827] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
+    >
+      {processing ? "Creating..." : "Increase Image Size"}
+    </button>
+
+    {/* Download */}
+    <button
+      type="button"
+      disabled={!outputBlob || isDownloading}
+      onClick={handleDownload}
+      className={`flex min-w-0 flex-1 items-center justify-center gap-2 rounded-lg border px-2 py-3 text-center text-xs font-semibold text-white transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm ${
+        downloadSuccess
+          ? "border-green-500 bg-green-600 hover:bg-green-600"
+          : "border-[#46566e] bg-[#17202d] hover:bg-[#1d2b40]"
+      }`}
+    >
+      {isDownloading ? (
+        <>
+          <svg
+            className="h-4 w-4 animate-spin sm:h-5 sm:w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+          >
+            <circle
+              className="opacity-25"
+              cx="12"
+              cy="12"
+              r="10"
+              stroke="currentColor"
+              strokeWidth="4"
+            />
+            <path
+              className="opacity-90"
+              fill="currentColor"
+              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+            />
+          </svg>
+          Process..
+        </>
+      ) : downloadSuccess ? (
+        <>
+          <svg
+            className="h-4 w-4 sm:h-5 sm:w-5"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M5 12l4 4L19 6" />
+          </svg>
+          Downloaded
+        </>
+      ) : (
+        "Download PNG"
+      )}
+    </button>
+
+  </div>
+</footer>
+
       </div>
     </div>
   );
