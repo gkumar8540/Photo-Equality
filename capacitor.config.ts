@@ -4,6 +4,10 @@ const config: CapacitorConfig = {
   appId: 'com.photoequality.app.native',
   appName: 'Photo-Equality',
   webDir: 'artifacts/photo-editor/dist',
+  server: {
+    url: 'https://photo-equality.vercel.app',
+    cleartext: false
+  },
   plugins: {
     Keyboard: {
       resize: 'none'
