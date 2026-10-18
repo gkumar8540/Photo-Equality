@@ -4133,7 +4133,9 @@ const handleTextPointerUp = (
       className="w-full resize-none rounded-lg border border-white/10 bg-[#161a1f] px-2 py-3 text-xs text-white outline-none focus:border-[#f3ad61]"
     />
 
-    {/* BASIC FORMAT */}
+    {keyboardHeight === 0 && (
+      <>
+        {/* BASIC FORMAT */}
     <div className="mt-2 flex gap-1 overflow-x-auto scrollbar-hide">
 
       {/* BOLD */}
@@ -4411,6 +4413,8 @@ const handleTextPointerUp = (
         </button>
       </div>
     </div>
+      </>
+    )}
 
     {/* ADD / DONE *
     <div className="mt-2 flex gap-2">
@@ -4717,6 +4721,7 @@ const handleTextPointerUp = (
                            {/* FOOTER TOOLBAR */}
        <footer
         data-photo-editor-toolbar
+        style={{ display: keyboardHeight > 0 ? 'none' : 'block' }}
         className="fixed bottom-0 left-0 right-0 z-[200] border-t border-white/10 bg-[#20242c]/98 pb-[env(safe-area-inset-bottom)] shadow-[0_-8px_30px_rgba(0,0,0,0.25)] backdrop-blur">
         <div className="mx-auto flex max-w-[1100px] items-center gap-3 overflow-x-auto px-1 py-0 sm:justify-center sm:gap-2">
           {/* BACKGROUND */}

@@ -1,5 +1,6 @@
 import { App as CapacitorApp } from "@capacitor/app";
 
+
 import { Link } from "wouter";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsConditions from "./pages/TermsConditions";
