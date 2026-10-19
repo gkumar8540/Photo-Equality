@@ -420,18 +420,21 @@ export default function PhotoEqualityEditor() {
       `}</style>
 
       <header className="sticky top-0 z-30 border-b border-slate-700/80 bg-[#0c1d39]/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-3 py-3 sm:px-5 lg:px-6">
-          <div className="flex items-center gap-3">
-            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#f3ad61] text-xl font-black text-slate-900">PE</div>
-            <div><h1 className="text-base font-bold sm:text-lg">Photo-Equality Editor</h1><p className="text-xs text-slate-400">All your photo tools in one place</p></div>
-          </div>
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-3 py-2 sm:px-5 lg:px-6">
+          <div className="flex items-center gap-2">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#38BDF8] text-xl font-black text-slate-900">PE</div>
+            {/*<div><h1 className="text-base font-bold sm:text-lg">Editor</h1></div>*/}
+          
           <div className="flex flex-wrap items-center gap-2">
-            <button className="pe-secondary !px-3 !py-2 text-sm" onClick={undo} disabled={!hasImage}>↶ <span className="hidden sm:inline">Undo</span></button>
-            <button className="pe-secondary !px-3 !py-2 text-sm" onClick={redo} disabled={!hasImage}>↷ <span className="hidden sm:inline">Redo</span></button>
-            <button className="pe-secondary !px-3 !py-2 text-sm" onClick={resetEdits} disabled={!hasImage}>Reset</button>
-            <button className="pe-primary !px-3 !py-2 text-sm" onClick={() => fileInputRef.current?.click()}>{hasImage ? "Change photo" : "＋ Upload photo"}</button>
-            <button className="pe-primary !px-3 !py-2 text-sm" onClick={() => download("png")} disabled={!hasImage}>↓ Download</button>
+            <button className="pe-secondary !px-2.5 !py-1 text-sm" onClick={undo} disabled={!hasImage}>↶ <span className="hidden sm:inline">Undo</span></button>
+            <button className="pe-secondary !px-2.5 !py-1 text-sm" onClick={redo} disabled={!hasImage}>↷ <span className="hidden sm:inline">Redo</span></button>
+            <button className="pe-secondary !px-2.5 !py-1 text-sm" onClick={resetEdits} disabled={!hasImage}>Reset</button>
+            <button className="pe-primary !px-2.5 !py-1 text-sm" onClick={() => fileInputRef.current?.click()}>{hasImage ? "Change 📷" : "Upload 📷"}</button>
+           
+            {/*<button className="pe-primary !px-3 !py-2 text-sm" onClick={() => download("png")} disabled={!hasImage}>↓ Download</button>*/}
           </div>
+          </div>
+          <p className="text-xs text-slate-400">All your photo tools in one place</p>
         </div>
       </header>
 
@@ -445,7 +448,7 @@ export default function PhotoEqualityEditor() {
             {TOOLS.map((tool) => <button key={tool.id} className="pe-tool" aria-pressed={activeTool === tool.id} onClick={() => setActiveTool(tool.id)}><span className="pe-tool-icon">{tool.icon}</span><span className="text-xs">{tool.label}</span></button>)}
           </div>
           <div className="pe-panel overflow-hidden">
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-700 px-4 py-1.5">
               <div><h2 className="font-semibold">Editing board</h2><p className="text-xs text-slate-400">{hasImage ? `${resizeWidth} × ${resizeHeight} px` : "Upload a photo to begin"}</p></div>
               <span className="rounded-full border border-slate-600 px-3 py-1 text-xs text-slate-300">{TOOLS.find((t) => t.id === activeTool)?.label}</span>
             </div>
@@ -458,7 +461,7 @@ export default function PhotoEqualityEditor() {
                 </button>
               )}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-700 px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-700 px-4 py-2">
               <p className="text-xs text-slate-400">Tip: select Text to position your text by dragging on the photo.</p>
               <button className="pe-secondary !px-3 !py-2 text-sm" onClick={snapshot} disabled={!hasImage}>Apply checkpoint</button>
             </div>

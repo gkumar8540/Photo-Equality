@@ -1,4 +1,6 @@
 import { App as CapacitorApp } from "@capacitor/app";
+import React from "react";
+import { useLocation } from "wouter";
 
 
 import { Link } from "wouter";
@@ -7,7 +9,6 @@ import TermsConditions from "./pages/TermsConditions";
 import Disclaimer from "./pages/Disclaimer";
 import ContactUs from "./pages/ContactUs";
 
-import ImgToolsPage from './pages/imgTools';
 import Passport from "./pages/Passport";
 import Reduce from "./pages/Reduce";
 import Increase from "./pages/Increase";
@@ -25,6 +26,8 @@ import OrbitNavigationPage from './pages/orbit-navigation';
 import PulseNavigationPage from './pages/pulse-navigation';
 import OldFuturePage from './pages/OldFuture';
 import TopNavigationPage from './pages/top-navigation';
+import PhotoEdit from "./pages/photoedit";
+
 import {
   ArrowUpRight,
   Focus,
@@ -607,56 +610,99 @@ function PhotoEquality() {
   };
 }, [isLooksOpen]);
 
+  const [, setLocation] = useLocation();
+
+  const tools = [
+    {
+      title: "Passport",
+      subtitle: "Passport Size",
+      icon: "🪪",
+      path: "/images/passport",
+    },
+    {
+      title: "Remove",
+      subtitle: "Background",
+      icon: "✂️",
+      path: "/images/remove-bg",
+    },
+    {
+      title: "Photo Edit Pro",
+      subtitle: "Edit Like a Pro",
+      icon: "🖼️",
+      path: "/images/Time-Travel",
+    },
+    {
+      title: "Photo Mixer",
+      subtitle: "Mix & Blend Photos",
+      icon: "🔀",
+      path: "/images/mixer",
+    },
+    {
+      title: "Reduce",
+      subtitle: "Image KB",
+      icon: "📉",
+      path: "/images/reduce",
+    },
+    {
+      title: "Increase",
+      subtitle: "Image KB-MB",
+      icon: "📈",
+      path: "/images/increase",
+    },
+    {
+      title: "Photo Edit",
+      subtitle: "Edit & Enhance",
+      icon: "📷",
+      path: "/images/photoedit",
+    },
+    {
+      title: "TimeX",
+      subtitle: "Past & Present",
+      icon: "🕰️",
+      path: "/images/sidebar",
+    },
+    
+    
+    
+  ];
+
+  const openTool = (path: string) => {
+    setLocation(path);
+  };
+
   return (
     <main className="min-h-[100dvh] bg-[#1d3255] pb-[calc(0rem+env(safe-area-inset-bottom))] text-[#ede7db] md:pb-0">
       <header className="relative z-50 flex min-h-[72px] flex-wrap items-center justify-between gap-y-2 border-b border-[#9d9fa1] bg-[#15181d] px-4 py-2 sm:px-7">
         <div className="flex items-center gap-3">
         
-     <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
-     <img
-     src={logo}
-     alt="Logo"
-     className="h-full w-full object-cover"/>
-     </div>
+      <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-[50px] bg-[#f3ad61] text-[#22252a] shadow-[0_0_26px_rgba(242,170,90,.14)]">
+       <img
+        src={logo}
+        alt="Logo"
+        className="h-full w-full object-cover"/>
+      </div>
 
-          <div>
-            <div className="flex items-center gap-3.5">
-              <h1 className="text-[15px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Photo-EQuality</h1>
-              {/*<span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>*/}
-
-            <div className="ml-auto flex items-center">
-          <button type="button"onClick={downloadImage} disabled={!hasImage || isDownloading}
-              className={`control-button ml-5 flex items-center justify-center gap-1 rounded-md px-2 py-1.5 text-[9px] font-bold disabled:cursor-not-allowed disabled:opacity-40 ${downloadComplete ? 'bg-emerald-500 text-black' : 'bg-[#f1ae62] text-[#24272a] hover:bg-[#ffc47e]'}`}
-              data-testid="button-download">
-              {isDownloading ? (
-              <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#24272a]/30 border-t-[#24272a]" />
-              ) : downloadComplete ? (
-              <Check size={14} />
-              ) : (
-              <Download size={14} />
-             )}
-
-             {downloadComplete ? 'Saved' : isDownloading ? '' : 'Save'}
-           </button>
-            </div>
+        <div>
+          <div className="flex items-center gap-21.5">
+            <h1 className="text-[18px] font-extrabold tracking-[-.02em] text-[#f4eee2]">Photo-EQuality</h1>
+            {/*<span className="rounded-full border border-[#465052] px-1.5 py-0.5 font-mono text-[8px] uppercase tracking-[.12em] text-[#a8aaa5]">Beta</span>*/}
 
 
-  <div className="relative">
-  {/* Menu Button */}
- <button
-  type="button"onClick={(e) => {e.stopPropagation();
-    setMenuOpen((prev) => !prev);
-  }}
-    className="flex items-center gap-1 bg-transparent px-1 py-1 text-sm text-white">
-    <span className="text-3xl leading-none">☰</span>
-    {/*<span className="text-sm">Menu</span>*/}
-  </button>
+         <div className="relative">
+        {/* Menu Button */}
+        <button type="button"onClick={(e) => {e.stopPropagation();
+        setMenuOpen((prev) => !prev);
+        }}
+        className=" flex items-center gap-1 bg-transparent  px-1 py-1 text-sm text-white">
+       <span className="text-3xl leading-none">☰</span>
+       {/*<span className="text-sm">Menu</span>*/}
+     </button>
 
   {/* Menu Dropdown */}
  {menuOpen && (
   <div
     onClick={(e) => e.stopPropagation()}
-    className="absolute right-0 top-full z-[100] mt-2 w-36 rounded-lg border border-[#30363d] bg-[#303030] p-2 shadow-2xl">
+    className="absolute right-0 top-full z-[100] mt-0 w-46 rounded-lg border border-[#30363d] bg-[#303030] p-2 shadow-2xl">
 
       <Link
         to="/privacy-policy"
@@ -693,410 +739,76 @@ function PhotoEquality() {
   )}
 </div>
 
-            </div>
-            <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
-          </div>
+      </div>
+        <p className="hidden font-mono text-[9px] uppercase tracking-[.15em] text-[#777e80] sm:block">A quiet place to make images sing</p>
         </div>
-        <TopNavigation>
+        </div>
+
+        {/*<TopNavigation>
           <div className="items-center grid w-full px-2 py-1 grid-cols-3 gap-3">
           <a href="/nav/mixer" className="flex items-center justify-center rounded-md h-6 px-4 py-2 text-[15px] font-bold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Mixer</a>
           <a href="/nav/sidebar" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">TimeX</a>
-          <a href="/nav/imgtools" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Tools</a>
-          {/*<a href="/nav/breadcrumb" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Crumb</a>
-          <a href="/nav/bottom" className="rounded-md h-7 px-2 py-2 text-[10px] font-semibold text-[#a8aaa5] transition-colors hover:bg-[#fb7182] hover:text-[#f4eee2]">Bottom</a>*/}
-          {/*<a href="/nav/orbit" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Orbit</a>
-          <a href="/nav/pulse" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Pulse</a>*/}
+          
+          <a href="/nav/photoedit" className="flex items-center justify-center rounded-md h-6 px-2 py-2 text-[15px] font-semibold text-[#171717] transition-colors bg-[#ffffff] hover:text-[#a8aaa5]">Photo</a>
           </div>
-        </TopNavigation>
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 text-[10px] text-[#858b8d] sm:flex">
+        </TopNavigation>*/}
+
+          <div className="flex items-center gap-2">
+           <div className="hidden items-center gap-2 text-[10px] text-[#858b8d] sm:flex">
             <ShieldCheck size={14} className="text-[#d99d59]" />
             <span>Nothing leaves your browser</span>
-          </div>
+           </div>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileInput} data-testid="input-file" />
           {/*<button type="button" onClick={() => fileInputRef.current?.click()} className="control-button flex items-center gap-2 rounded-lg bg-[#f1ae62] px-3.5 py-2.5 text-[11px] font-extrabold text-[#24272a] shadow-[0_5px_18px_rgba(241,174,98,.12)] hover:bg-[#ffc47e]" data-testid="button-open-image">
             <UploadCloud size={15} /> Open image
           </button>*/}
         </div>
       </header>
+                                 
+                       {/*main start here */}
 
-    <div className="mx-auto grid min-h-[75vh] max-w-[1640px] grid-cols-1 bg-[#111419] md:min-h-[calc(88dvh-72px)]">
-        <section className="studio-grid mobile-preview flex min-h-fit flex-col bg-[#294169]">
-          <div className="flex items-center justify-between border-b border-[#4271ff] px-4 py-0.5 sm:px-6">
-            <div className="flex items-center gap-2">
-              <span className={`h-1.5 w-1.5 rounded-full ${hasImage ? 'bg-[#e9a35b]' : 'bg-[#1c8d15]'}`} />
-              <span className="font-mono text-[10px] uppercase tracking-[.16em] text-[#989d9b]">{hasImage ? 'Live preview' : 'Ready when you are'}</span>
-            </div>
-          </div>
-          <div
-            className={`relative flex flex-1 items-center justify-center p-3.5 sm:p-8 ${isDraggingFile ? 'bg-[#26231f]' : ''}`}
-            onDragOver={(event) => { event.preventDefault(); setIsDraggingFile(true); }}
-            onDragLeave={() => setIsDraggingFile(false)}
-            onDrop={(event) => { event.preventDefault(); setIsDraggingFile(false); loadFile(event.dataTransfer.files[0]); }}
-            data-testid="drop-zone">
-            {!hasImage ? (
-              <div className={`drop-zone relative flex min-h-[61vh] w-full max-w-[900px] flex-col items-center justify-center overflow-hidden rounded-sm border border-[#db2777] bg-[#ffffff] px-1 text-center shadow-[0_20px_70px_rgba(0,0,0,.18)] transition-colors sm:min-h-[400px] sm:px-7 ${isDraggingFile ? 'border-[#f3ad61] bg-[#25251f]' : ''}`}>
-                <EmptyArtwork />
-                <div className="relative z-10 animate-rise-in">
-                  <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-[#55514a] bg-[#262b30]/90 text-[#f0ad66] shadow-[0_10px_30px_rgba(0,0,0,.22)]">
-                    <ImagePlus size={27} strokeWidth={1.5} />
-                  </div>
-                  <h3 className="pt-2 text-lg font-extrabold tracking-[-.035em] text-[#6b7280] sm:text-2xl">Edit Enhance Create.</h3>
-                  <p className="mx-auto mt-2 max-w-[360px] text-[12px] leading-relaxed text-[#6b7280]">Your images Your edits Your control.</p>
-                  <button type="button" onClick={() => fileInputRef.current?.click()} className="control-button mt-6 inline-flex items-center gap-2 rounded-lg border border-[#71624f] bg-[#443528] px-4 py-2.5 text-[11px] font-bold text-[#f5c486] hover:border-[#eeb06c] hover:bg-[#3a3025]" data-testid="button-choose-image">
-                    <UploadCloud size={15}/> Choose image
-                  </button>
-                  <p className="mt-4 font-mono text-[9px] uppercase tracking-[.18em] text-[#646d70]">JPG · PNG · WEBP · GIF</p>
-                </div>
-              </div>
-            ) : (
-              <div ref={stageRef} className="relative inline-flex items-center justify-center w-full h-full max-w-full animate-rise-in" style={{ maxHeight: 'calc(100dvh - 190px)' }}>
-                <div className="checkerboard relative flex min-h-[68vh] w-full mb-4 items-center justify-center overflow-hidden rounded-sm border border-[#303840] p-1 shadow-[0_24px_70px_rgba(0,0,0,.34)] sm:min-h-[350px]">
-                  <div className="relative block h-auto max-h-[calc(100dvh-130px)] max-w-full">
-                    {!cropMode && (
-                      <button
-                        type="button"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          removeSelectedImage();
-                        }}
-                        className="absolute left-0 top-0 z-30 flex h-7 w-7 items-center justify-center rounded-full border border-white/30 bg-[#808080]/85 text-xl font-bold leading-none text-white shadow-lg hover:bg-red-600"
-                        aria-label="Remove selected image"
-                        data-testid="button-remove-image"
-                      >
-                        ×
-                      </button>
-                    )}
-                    <canvas ref={canvasRef} className="block h-auto max-h-[calc(100dvh-230px)] max-w-full rounded-0 object-contain" style={{ imageRendering: 'auto', maxHeight: window.innerWidth < 768 ? 'calc(100dvh - 300px)' : 'calc(100dvh - 230px)' }} data-testid="canvas-preview" />
-                    {cropMode && (
-                      <div
-                        className="absolute inset-0 cursor-crosshair touch-none"
-                        onPointerDown={beginCrop}
-                        onPointerMove={moveCrop}
-                        onPointerUp={endCrop}
-                        onPointerCancel={endCrop}
-                        data-testid="crop-overlay">
-                        {cropRect && (
-                        <div onPointerDown={(event) => event.stopPropagation()} className="crop-window absolute border border-[#f6bf7d]" style={{ left: `${cropRect.x * 100}%`, top: `${cropRect.y * 100}%`, width: `${cropRect.w * 100}%`, height: `${cropRect.h * 100}%` }}>
-                          <div className="pointer-events-none absolute inset-0 grid grid-cols-3 grid-rows-3">
-                            <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
-                            <span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-r border-b border-[#f6bf7d]/35" /><span className="border-b border-[#f6bf7d]/35" />
-                            <span className="border-r border-[#f6bf7d]/35" /><span className="border-r border-[#f6bf7d]/35" /><span />
-                          </div>
-                          <span className="absolute -left-1 -top-1 h-3 w-3 border-l-2 border-t-2 border-[#f6bf7d]" />
-                          <span className="absolute -right-1 -top-1 h-3 w-3 border-r-2 border-t-2 border-[#f6bf7d]" />
-                          <span className="absolute -bottom-1 -left-1 h-3 w-3 border-b-2 border-l-2 border-[#f6bf7d]" />
-                          <span className="absolute -bottom-1 -right-1 h-3 w-3 border-b-2 border-r-2 border-[#f6bf7d]" />
-                          <span onPointerDown={(event) => beginResize(event, 'top-left')} className="absolute -left-2 -top-2 h-4 w-4 cursor-nwse-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'top')} className="absolute -left-1/2 -top-2 h-4 w-full cursor-ns-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'top-right')} className="absolute -right-2 -top-2 h-4 w-4 cursor-nesw-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'right')} className="absolute -right-2 -top-1/2 h-full w-4 cursor-ew-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'bottom-right')} className="absolute -bottom-2 -right-2 h-4 w-4 cursor-nwse-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'bottom')} className="absolute -bottom-2 -left-1/2 h-4 w-full cursor-ns-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'bottom-left')} className="absolute -bottom-2 -left-2 h-4 w-4 cursor-nesw-resize" />
-                          <span onPointerDown={(event) => beginResize(event, 'left')} className="absolute -left-2 -top-1/2 h-full w-4 cursor-ew-resize" />
-                        </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {cropMode && hasImage && (
-            <div className="fixed bottom-[calc(4rem+env(safe-area-inset-bottom))] left-2 right-2 z-[9999] mx-auto flex max-w-[760px] items-center justify-between gap-3 rounded-lg border border-[#30363d] bg-[#171b20]/95 px-3 py-2 shadow-xl">
-              {/*<p className="flex items-center gap-2 text-[10px] text-[#a4a7a2]"><Crop size={14} className="text-[#e9a65e]" /> Drag an edge or corner to adjust the crop</p>
-              <div className="flex shrink-0 gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    cropInteractionRef.current = null;
-                    setCropMode(false);
-                    setCropRect(null);
-                  }}
-                  className="control-button rounded-md px-3 py-2 text-[10px] font-bold text-[#a9adaa] hover:bg-[#252b31]"
-                  data-testid="button-cancel-crop"
-                >
-                  Cancel
-                </button>
-              </div>*/}
-            </div>
-          )}
-        </section>
+     <div className="min-h-screen bg-[#0c1d39] px-4 py-2 text-white">
+      <div className="mx-auto w-full max-w-3xl">
+        {/* Header */}
+         <div className="mb-3 text-center">
+           <h1 className="text-2xl font-bold sm:text-3xl">
+            Images Tools
+           </h1>
+           <p className="mt-0 text-sm text-gray-400">
+            Simple and powerful image tools
+           </p>
+         </div>
 
-
-    </div>
-
-  <footer className=" fixed bottom-0 left-0 z-50 w-full flex flex-col items-start justify-between gap-3 border-t border-[#282e35] bg-[#392c3a] px-4 py-2 sm:flex-row sm:items-center sm:px-7">
-        <div className="flex min-h-2 items-center gap-2 text-[10px] text-[#888e8e]" data-testid="status-message">
-        {exportMessage ? <><Check size={13} className="text-[#dc9f5b]" />{exportMessage}</> : <><span className="h-1.5 w-1.5 rounded-full bg-[#5f686a]"/> Edits are private by default</>}
-        </div>
-
-    <div className="flex w-full min-w-0 flex-nowrap items-center gap-1 sm:gap-2">
-     <div className="relative min-w-0 flex-1 sm:flex-none">
-      <button type="button" onClick={(event) => { event.stopPropagation();
-      setShowAdjustments((value) => !value);}}
-      className="flex w-full items-center justify-center gap-1 rounded-lg border border-[#30363d] bg-[#20252b] px-2 py-2 text-left sm:w-auto sm:justify-between sm:gap-3 sm:px-3">
-      <span className="text-[13px] font-bold text-[#eee7db] sm:text-[14px]">
-      Adjust
-      </span>
-      <span className="text-[12px] text-[#8a8f8f]">
-      {showAdjustments ? '−' : '+'}
-      </span>
-      </button>
-
-      {showAdjustments && (
-      <div
-      onClick={(event) => event.stopPropagation()}
-      className="absolute bottom-full left-0 z-50 mb-0 w-[300px] rounded-xl   p-3 ">
-      
-      <AdjustmentRow
-        label="Brightness"
-        value={controls.brightness}
-        min={-100}
-        max={100}
-        onChange={(value) => updateControl('brightness', value)}
-        icon={<Sun size={13} />}
-        disabled={!hasImage}
-        testId="brightness"
-        onReset={() => updateControl('brightness', 0)}/>
-
-      <AdjustmentRow
-        label="Contrast"
-        value={controls.contrast}
-        min={-100}
-        max={100}
-        onChange={(value) => updateControl('contrast', value)}
-        icon={<Contrast size={13} />}
-        disabled={!hasImage}
-        testId="contrast"
-        onReset={() => updateControl('contrast', 0)}/>
-
-      <AdjustmentRow
-        label="Saturation"
-        value={controls.saturation}
-        min={-100}
-        max={100}
-        onChange={(value) => updateControl('saturation', value)}
-        icon={<Droplets size={13} />}
-        disabled={!hasImage}
-        testId="saturation"
-        onReset={() => updateControl('saturation', 0)}/>
-
-      <AdjustmentRow
-        label="Blur"
-        value={controls.blur}
-        min={0}
-        max={20}
-        onChange={(value) => updateControl('blur', value)}
-        icon={<Focus size={13} />}
-        suffix="px"
-        disabled={!hasImage}
-        testId="blur"
-        onReset={() => updateControl('blur', 0)}/>
-     </div>
-     )}
-    </div>
-                       {/*Filter start here*/}
-    <div
-        onClick={(event) => event.stopPropagation()}
-          className="relative min-w-0 flex-1 sm:flex-none">
-           {/* Filters Button */}
-        <button type="button"onClick={() => setIsLooksOpen((prev) => !prev)}
-          className="flex w-full items-center justify-center text-left sm:w-auto">
-          <p className="block w-full rounded-lg border border-[#30363d] bg-[#DB2777] px-1.5 py-2 text-center text-[13px] font-bold text-[#eee7db] shadow-sm sm:w-auto sm:px-4 sm:text-[13px]">
-          Filters
-          </p>
-       </button>
-
-       {/* Filter Popup - Opens ABOVE Button */}
-       {isLooksOpen && (
-     <div className="absolute bottom-full left-[-96px] z-[100] mb-1.5 w-[min(99vw,520px)]">
-
-      {/* Filter Row */}
-       <div className="w-full rounded-lg bg-[#0c1d39]/95 p-1.5">
-        <div className="flex w-full min-w-0 gap-2 overflow-x-auto pb-2 scrollbar-hide">
-          {filterOptions.map((option) => (
+        {/* 2 × 2 Tools Grid */}
+        <div className="grid grid-cols-2 gap-3 sm:gap-6">
+          {tools.map((tool) => (
             <button
-              key={option.name}
+              key={tool.path}
               type="button"
-              onClick={() => updateControl('filter', option.name)}
-              disabled={!hasImage}
-              className={`filter-card w-[74px] shrink-0 rounded-lg border bg-[#20252b] p-1.5 text-left disabled:cursor-not-allowed disabled:opacity-40 ${
-                controls.filter === option.name
-                  ? 'selected border-[#f3ad61] bg-[#2a2925]'
-                  : 'border-[#30363d]'
-              }`}
-              data-testid={`button-filter-${option.name.toLowerCase()}`}>
-              {/* Filter Colour Box */}
-              <div
-                className="relative flex h-15 w-15 flex-col items-center justify-center overflow-hidden rounded-md text-center"
-                style={{
-                  background: option.swatch,
-                  filter:
-                    option.name === 'Noir'
-                      ? 'grayscale(1)'
-                      : option.name === 'Cool'
-                        ? 'hue-rotate(16deg)'
-                        : undefined,
-                      }}>
-                <span className="text-[10px] font-bold text-white">
-                  {option.name}
-                </span>
+              onClick={() => openTool(tool.path)}
+              className="group flex min-h-[130px] flex-col items-center justify-center rounded-2xl border border-[#34445b] bg-[#141f30] p-0 text-center shadow-lg transition-all duration-200 hover:-translate-y-1 hover:border-[#f3ad61] hover:bg-[#18263a] active:scale-[0.98]"
+            >
+              {/* Icon */}
+              <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-xl bg-[#202d40] text-3xl transition group-hover:bg-[#29384d]">
+                {tool.icon}
+              </div>
 
-                <span className="mt-0.5 text-[8px] leading-tight text-white/80">
-                  {option.description}
-                </span>
+              {/* Title */}
+              <div className="text-base font-bold text-white sm:text-lg">
+                {tool.title}
+              </div>
+
+              {/* Subtitle */}
+              <div className="mt-0 text-sm text-gray-400">
+                {tool.subtitle}
               </div>
             </button>
           ))}
         </div>
-
-        {/* Filter Intensity */}
-        {/*<div
-          className={`mt-1 border-t border-[#2a3036] pt-2 ${
-            !hasImage ? 'opacity-40' : ''}`}>
-            <div className="mb-1 flex items-center justify-between">
-            <label
-              htmlFor="filter-intensity"
-              className="text-[11px] font-semibold text-[#d4d0c9]">
-              Filter intensity
-            </label>
-
-            <span className="font-mono text-[10px] text-[#9fa3a1]">
-              {controls.intensity}%
-            </span>
-         </div>
-
-          <input
-            id="filter-intensity"
-            type="range"
-            min={0}
-            max={100}
-            value={controls.intensity}
-            disabled={!hasImage}
-            onChange={(event) =>
-              updateControl('intensity', Number(event.target.value))
-            }
-            style={
-              {
-                '--range-progress': `${controls.intensity}%`,
-              } as CSSProperties
-            }
-            className="range-warm h-4 w-full cursor-pointer appearance-none bg-transparent"
-            data-testid="input-filter-intensity"/>
-        </div>*/}
       </div>
     </div>
-  )}
-</div>
 
 
-
-<div className="relative min-w-0 flex-1 sm:flex-none" data-tools-menu>
-
-  {/* Small Tools Button */}
-  <button
-    type="button"
-    disabled={!hasImage}
-    onClick={(e) => {
-      e.stopPropagation();
-      setToolsOpen((prev) => !prev);
-    }}
-   className={`control-button flex w-full items-center justify-center rounded-md border px-1.5 py-1.5 text-[9px] font-semibold sm:w-auto sm:px-2.5 sm:py-1.5 ${
-  cropMode
-    ? "!border-[#f3ad61] !bg-[#f3ad61] !text-[#111827]"
-    : "!border-[#30363d] !bg-[#20252b] !text-[#a8aaa5] hover:!border-[#55534c] hover:!text-[#eee7db]"
-} disabled:cursor-not-allowed disabled:opacity-40`}>
-    Crop
-  </button>
-
-  {/* Tools Popup */}
-  {toolsOpen && (
-    <div
-      onMouseDown={(e) => e.stopPropagation()}
-      className="absolute right-10px bottom-full z-50 mb-3 w-63 -translate-x-1/2 flex items-center justify-center gap-3 rounded-lg border border-[#30363d] bg-[#9ca3af] px-5 py-1 shadow-xl"
-    >
-
-      {/* Crop */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-
-          if (cropMode) {
-            if (cropRect) setAppliedCrop(cropRect);
-            setCropMode(false);
-            setCropRect(null);
-            cropInteractionRef.current = null;
-            return;
-          }
-
-          setCropMode(true);
-          setCropRect({ x: 0, y: 0, w: 1, h: 1 });
-        }}
-        disabled={!hasImage}
-        className={`control-button flex h-8.5 w-[76px] shrink-0 items-center justify-center gap-1 rounded-md border px-2 py-1 text-[9px] font-semibold ${
-          cropMode
-            ? "border-[#f3ad61] bg-[#342b23] text-[#f3b572]"
-            : "border-[#30363d] bg-[#20252b] text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db]"
-        } disabled:cursor-not-allowed disabled:opacity-40`}
-        data-testid="button-toggle-crop">
-        <Crop size={13} />
-        {cropMode ? "Apply" : "Crop"}
-      </button>
-
-      {/* Left */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          rotate("left");
-          setToolsOpen(false);
-        }}
-        disabled={!hasImage}
-        className="control-button flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
-        data-testid="button-rotate-left"
-      >
-        <RotateCcw size={13} />
-        Left
-      </button>
-
-      {/* Right */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          rotate("right");
-          setToolsOpen(false);
-        }}
-        disabled={!hasImage}
-        className="control-button flex shrink-0 items-center justify-center gap-1 rounded-md border border-[#30363d] bg-[#20252b] px-2 py-1 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40"
-        data-testid="button-rotate-right"
-      >
-        <RotateCw size={13} />
-        Right
-      </button>
-
-    </div>
-  )}
-
-</div>
-
-
-      
-
-      <span className="ml-0 min-w-0 flex-1 sm:flex-none">
-      <button type="button" onClick={resetAll} disabled={!hasImage} className="control-button flex w-full items-center justify-center gap-1 rounded-lg border border-[#394047] bg-[#20252b] px-1.5 py-1.5 text-[10px] font-bold text-[#b1b1aa] hover:border-[#667072] hover:text-[#eee7db] disabled:cursor-not-allowed disabled:opacity-40 sm:w-auto sm:gap-1.5 sm:px-3 sm:py-1 sm:text-[11px]" data-testid="button-reset-all">
-      <RotateCcw size={14} /> Reset
-      </button>
-      </span>
-   </div>
-
-      
-      </footer>
     </main>
   );
 }
@@ -1148,20 +860,17 @@ function App() {
     <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <Switch>
         <Route path="/" component={PhotoEquality} />
-        <Route path="/nav/mixer" component={TopNavigationPage} />
-        <Route path="/nav/top" component={TopNavigationPage} />
-        <Route path="/nav/sidebar" component={OldFuturePage} />
-        <Route path="/nav/breadcrumb" component={BreadcrumbNavigationPage} />
-        <Route path="/nav/bottom" component={BottomNavigationPage} />
-        <Route path="/nav/orbit" component={OrbitNavigationPage} />
-        <Route path="/nav/pulse" component={PulseNavigationPage} />
+        
+
 
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/terms-conditions" component={TermsConditions} />
         <Route path="/disclaimer" component={Disclaimer} />
         <Route path="/contact-us" component={ContactUs} />
 
-        <Route path="/nav/imgtools" component={ImgToolsPage} />
+        <Route path="/images/mixer" component={TopNavigationPage} />
+        <Route path="/images/sidebar" component={OldFuturePage} />      
+        <Route path="/images/photoedit" component={PhotoEdit} />
         <Route path="/images/passport" component={Passport} />
         <Route path="/images/reduce" component={Reduce} />
         <Route path="/images/increase" component={Increase} />

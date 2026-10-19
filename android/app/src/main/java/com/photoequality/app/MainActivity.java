@@ -56,6 +56,35 @@ public class MainActivity extends BridgeActivity {
                             "        }\n" +
                             "        oldClick.apply(this, arguments);\n" +
                             "    };\n" +
+                            "    var textInputSelector = 'textarea[placeholder=\"Type your text...\"]';\n" +
+                            "    var viewport = window.visualViewport;\n" +
+                            "    var textInputFocused = false;\n" +
+                            "    var keyboardBaseHeight = 0;\n" +
+                            "    var updateTextPopupPosition = function() {\n" +
+                            "        var input = document.querySelector(textInputSelector);\n" +
+                            "        var panel = input && input.closest('[data-photo-editor-panel]');\n" +
+                            "        var viewportHeight = viewport ? viewport.height : window.innerHeight;\n" +
+                            "        var keyboardVisible = textInputFocused && keyboardBaseHeight - viewportHeight > 120;\n" +
+                            "        if (!panel) return;\n" +
+                            "        if (keyboardVisible) {\n" +
+                            "            panel.style.setProperty('bottom', '0px', 'important');\n" +
+                            "        } else {\n" +
+                            "            panel.style.removeProperty('bottom');\n" +
+                            "        }\n" +
+                            "    };\n" +
+                            "    document.addEventListener('focusin', function(event) {\n" +
+                            "        if (!event.target.matches(textInputSelector)) return;\n" +
+                            "        textInputFocused = true;\n" +
+                            "        keyboardBaseHeight = viewport ? viewport.height : window.innerHeight;\n" +
+                            "        setTimeout(updateTextPopupPosition, 300);\n" +
+                            "    });\n" +
+                            "    document.addEventListener('focusout', function(event) {\n" +
+                            "        if (!event.target.matches(textInputSelector)) return;\n" +
+                            "        textInputFocused = false;\n" +
+                            "        updateTextPopupPosition();\n" +
+                            "    });\n" +
+                            "    if (viewport) viewport.addEventListener('resize', updateTextPopupPosition);\n" +
+                            "    window.addEventListener('resize', updateTextPopupPosition);\n" +
                             "})();";
                     getBridge().getWebView().evaluateJavascript(js, null);
                 }
