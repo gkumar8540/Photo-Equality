@@ -56,6 +56,26 @@ export default function RemoveBg() {
     };
   }, []);
 
+  // Keep progress moving while AI is processing
+useEffect(() => {
+  if (!processing) return;
+
+  const timer = window.setInterval(() => {
+    setProgress((prev) => {
+      if (prev >= 95) return 95;
+
+      // Smooth estimated progress
+      const step = prev < 50 ? 1 : prev < 70 ? 0.5 : 0.2;
+
+      return Math.min(95, prev + step);
+    });
+  }, 300);
+
+  return () => window.clearInterval(timer);
+}, 
+[processing]
+);
+
   const handleFile = (
     event: React.ChangeEvent<HTMLInputElement>
   ) => {
@@ -104,6 +124,8 @@ export default function RemoveBg() {
     setProgress(0);
     setStatus("Preparing AI background removal...");
 
+    
+
     const blob = await removeBackground(file, {
       // Higher-quality model
       model: "isnet",
@@ -115,47 +137,45 @@ export default function RemoveBg() {
       },
 
       // Live processing stages
-      progress: (key: string, current: number, total: number) => {
-        if (!total) return;
+progress: (key: string, current: number, total: number) => {
+  if (!total) return;
 
-        const ratio = current / total;
-        let percent = 0;
+  const ratio = Math.max(0, Math.min(1, current / total));
+  let percent = 0;
 
-        // Model / WASM files loading
-        if (!key.startsWith("compute:")) {
-          percent = Math.round(ratio * 20);
+  // Model / WASM files loading
+  if (!key.startsWith("compute:")) {
+    percent = Math.round(ratio * 20);
+    setStatus("Loading AI model...");
+  }
 
-          setStatus("Loading AI model...");
-        }
+  // Image decoding
+  else if (key === "compute:decode") {
+    percent = 25;
+    setStatus("Preparing image...");
+  }
 
-        // Image decoding
-        else if (key === "compute:decode") {
-          percent = 25;
-          setStatus("Preparing image...");
-        }
+  // Main AI segmentation
+  else if (key === "compute:inference") {
+    percent = Math.round(25 + ratio * 35);
+    setStatus("AI is detecting the subject...");
+  }
 
-        // Main AI segmentation
-        else if (key === "compute:inference") {
-          percent = 50;
-          setStatus("AI is detecting the subject...");
-        }
+  // Applying mask
+  else if (key === "compute:mask") {
+    percent = Math.round(60 + ratio * 20);
+    setStatus("Removing background...");
+  }
 
-        // Applying mask
-        else if (key === "compute:mask") {
-          percent = 75;
-          setStatus("Removing background...");
-        }
+  // Creating final transparent PNG
+  else if (key === "compute:encode") {
+    percent = Math.round(80 + ratio * 15);
+    setStatus("Creating transparent image...");
+  }
 
-        // Creating final transparent PNG
-        else if (key === "compute:encode") {
-          percent = Math.round(75 + ratio * 25);
-          setStatus("Creating transparent image...");
-        }
-
-        setProgress(
-          Math.max(0, Math.min(100, percent))
-        );
-      },
+  // Progress ko peeche jaane se rokein
+  setProgress((prev) => Math.max(prev, Math.min(95, percent)));
+},
     });
 
     // Processing completed

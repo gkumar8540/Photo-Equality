@@ -454,7 +454,7 @@ export default function PhotoEqualityEditor() {
             </div>
             <div ref={boardRef} className="grid min-h-[320px] place-items-center bg-[#101720] p-3 sm:min-h-[460px] sm:p-6">
               {hasImage ? (
-                <canvas ref={canvasRef} onPointerDown={startTextDrag} onPointerMove={moveTextDrag} onPointerUp={() => { setDraggingText(false); dragPointerRef.current = null; }} onPointerCancel={() => { setDraggingText(false); dragPointerRef.current = null; }} className={`max-h-[68vh] max-w-full rounded-sm object-contain shadow-2xl ${activeTool === "text" && text.trim() ? "cursor-move touch-none" : ""}`} style={{ width: "auto", height: "auto" }} />
+                <canvas ref={canvasRef} onPointerDown={startTextDrag} onPointerMove={moveTextDrag} onPointerUp={() => { setDraggingText(false); dragPointerRef.current = null; }} onPointerCancel={() => { setDraggingText(false); dragPointerRef.current = null; }} className={`max-h-[68vh] max-w-full rounded object-contain shadow-2xl ${activeTool === "text" && text.trim() ? "cursor-move touch-none" : ""}`} style={{ width: "auto", height: "auto" }} />
               ) : (
                 <button onClick={() => fileInputRef.current?.click()} className="flex w-full max-w-md flex-col items-center rounded-2xl border-2 border-dashed border-slate-600 px-6 py-12 text-center hover:border-[#f3ad61]">
                   <span className="mb-4 grid h-16 w-16 place-items-center rounded-2xl bg-slate-800 text-3xl">＋</span><span className="font-semibold">Upload your photo</span><span className="mt-2 text-sm text-slate-400">JPG, PNG, WebP or GIF · up to 20 MB</span>

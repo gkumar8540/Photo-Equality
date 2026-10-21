@@ -767,7 +767,7 @@ function PhotoEquality() {
                                  
                        {/*main start here */}
 
-     <div className="min-h-screen bg-[#0c1d39] px-4 py-2 text-white">
+     <div className="min-h-162 bg-[#0c1d39] px-4 py-2 text-white">
       <div className="mx-auto w-full max-w-3xl">
         {/* Header */}
          <div className="mb-3 text-center">
