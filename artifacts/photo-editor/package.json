@@ -78,7 +78,9 @@
     "@capacitor/core": "^8.5.2",
     "@capacitor/filesystem": "^8.1.3",
     "@capacitor/share": "^8.0.2",
+    "@capgo/capacitor-document-scanner": "^8.4.14",
     "@imgly/background-removal": "^1.7.0",
-    "onnxruntime-web": "1.21.0"
+    "onnxruntime-web": "1.21.0",
+    "pdf-lib": "^1.17.1"
   }
 }

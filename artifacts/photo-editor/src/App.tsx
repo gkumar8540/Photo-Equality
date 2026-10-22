@@ -1,6 +1,8 @@
 import { App as CapacitorApp } from "@capacitor/app";
 import React from "react";
 import { useLocation } from "wouter";
+import { FileText } from "lucide-react";
+
 
 
 import { Link } from "wouter";
@@ -14,6 +16,7 @@ import Reduce from "./pages/Reduce";
 import Increase from "./pages/Increase";
 import RemoveBg from "./pages/RemoveBg";
 import TimeTravel from "./pages/TimeTravel";
+import DocScanner from "./pages/DocScanner";
 
 import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
 import { Route, Router as WouterRouter, Switch } from 'wouter';
@@ -22,8 +25,6 @@ import logo from '../../images/logoe3.jpeg';
 import { TopNavigation } from './components/navigation/TopNavigation';
 import BottomNavigationPage from './pages/bottom-navigation';
 import BreadcrumbNavigationPage from './pages/breadcrumb-navigation';
-import OrbitNavigationPage from './pages/orbit-navigation';
-import PulseNavigationPage from './pages/pulse-navigation';
 import OldFuturePage from './pages/OldFuture';
 import TopNavigationPage from './pages/top-navigation';
 import PhotoEdit from "./pages/photoedit";
@@ -659,7 +660,7 @@ function PhotoEquality() {
       title: "TimeX",
       subtitle: "Past & Present",
       icon: "🕰️",
-      path: "/images/sidebar",
+      path: "/images/Time-Travel",
     },
     
     
@@ -767,7 +768,7 @@ function PhotoEquality() {
                                  
                        {/*main start here */}
 
-     <div className="min-h-160 bg-[#0c1d39] px-4 py-2 text-white">
+     <div className="min-h-161 bg-[#0c1d39] px-4 py-2 text-white">
       <div className="mx-auto w-full max-w-3xl">
         {/* Header */}
          <div className="mb-3 text-center">
@@ -876,6 +877,7 @@ function App() {
         <Route path="/images/increase" component={Increase} />
         <Route path="/images/remove-bg" component={RemoveBg} />
         <Route path="/images/Time-Travel" component={TimeTravel} />
+        <Route path="/images/Doc-scanner"component={DocScanner}/>
 
         <Route component={NotFound} />
       </Switch>

@@ -1,3 +1,4 @@
+
 import React, { useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { removeBackground } from "@imgly/background-removal";
@@ -80,13 +81,8 @@ export default function Passport() {
   };
 
   const getBg = () => {
-    if (bg === "custom") {
-      return customColor;
-    }
-
-    if (bg === "removed") {
-      return "#ffffff";
-    }
+    if (bg === "custom") return customColor;
+    if (bg === "removed") return "#ffffff";
 
     const found = colorOptions.find((item) => item.id === bg);
     return found?.color || "#ffffff";
@@ -114,8 +110,7 @@ export default function Passport() {
     setRgbG(gg);
     setRgbB(bb);
 
-    const hex = rgbToHex(rr, gg, bb);
-    setCustomColor(hex);
+    setCustomColor(rgbToHex(rr, gg, bb));
     setBg("custom");
   };
 
@@ -125,13 +120,9 @@ export default function Passport() {
     setCustomColor(hex);
     setBg("custom");
 
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-
-    setRgbR(r);
-    setRgbG(g);
-    setRgbB(b);
+    setRgbR(parseInt(hex.slice(1, 3), 16));
+    setRgbG(parseInt(hex.slice(3, 5), 16));
+    setRgbB(parseInt(hex.slice(5, 7), 16));
   };
 
   const revokeUrl = (url: string) => {
@@ -163,162 +154,124 @@ export default function Passport() {
   };
 
   const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = e.target.files?.[0] || null;
-    handleFile(selected);
-
+    handleFile(e.target.files?.[0] || null);
     e.target.value = "";
   };
 
-  const loadImage = (src: string): Promise<HTMLImageElement> => {
-    return new Promise((resolve, reject) => {
+  const loadImage = (src: string): Promise<HTMLImageElement> =>
+    new Promise((resolve, reject) => {
       const img = new Image();
-
       img.onload = () => resolve(img);
       img.onerror = reject;
-
       img.src = src;
     });
-  };
 
   const getSourceImage = async () => {
     if (!imageUrlRef.current) {
       throw new Error("No image selected");
     }
-
     return loadImage(imageUrlRef.current);
   };
 
+  // singlePhotoOnly = true: create one photo for preview.
+  // Otherwise: one copy produces one photo; multiple copies produce an A4 sheet.
+  const createCanvas = async (singlePhotoOnly = false) => {
+    const size = getSize();
+    const dpi = 300;
 
+    const photoW = Math.max(1, Math.round((size.w / 25.4) * dpi));
+    const photoH = Math.max(1, Math.round((size.h / 25.4) * dpi));
 
-  const createCanvas = async () => {
-  const size = getSize();
+    const totalCopies = Math.max(1, Math.min(30, copies));
 
-  // A4 = 210 × 297 mm at 300 DPI
-  const dpi = 300;
+    const a4W = Math.round((210 / 25.4) * dpi);
+    const a4H = Math.round((297 / 25.4) * dpi);
 
-  const a4W = Math.round((210 / 25.4) * dpi);
-  const a4H = Math.round((297 / 25.4) * dpi);
+    const pageMargin = 120;
+    const gap = Math.round((3 / 25.4) * dpi);
 
-  // Selected photo size
-  const photoW = Math.round((size.w / 25.4) * dpi);
-  const photoH = Math.round((size.h / 25.4) * dpi);
+    const useA4 = !singlePhotoOnly && totalCopies > 1;
 
-  const totalCopies = Math.max(1, Math.min(100, copies));
+    const canvas = document.createElement("canvas");
+    canvas.width = useA4 ? a4W : photoW;
+    canvas.height = useA4 ? a4H : photoH;
 
-  // A4 page ke charon taraf 10px margin
-  const pageMargin = 120;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("Canvas is not supported");
 
-  // Photos ke beech ka gap
-  const gap = Math.round((3 / 25.4) * dpi);
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
 
-  // Ek row me maximum photos
-  const columns = Math.max(
-    1,
-    Math.floor(
-      (a4W - pageMargin * 2 + gap) /
-        (photoW + gap)
-    )
-  );
+    ctx.fillStyle = useA4 ? "#ffffff" : getBg();
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  // Total rows
-  const rows = Math.ceil(totalCopies / columns);
+    const img = await getSourceImage();
 
-  const canvas = document.createElement("canvas");
+    const scale = Math.max(photoW / img.width, photoH / img.height);
+    const drawW = img.width * scale * zoom;
+    const drawH = img.height * scale * zoom;
 
-  canvas.width = a4W;
-  canvas.height = a4H;
+    // Adjust controls ki movement ko photo ke preview dimensions
+    // se canvas pixels mein convert karo.
+    const previewHeight = 520;
+    const previewWidth = previewHeight * (size.w / size.h);
 
-  const ctx = canvas.getContext("2d");
+    const moveX = offsetX * (photoW / previewWidth);
+    const moveY = offsetY * (photoH / previewHeight);
+    
 
-  if (!ctx) {
-    throw new Error("Canvas is not supported");
-  }
+    const columns = useA4
+      ? Math.max(
+          1,
+          Math.floor(
+            (a4W - pageMargin * 2 + gap) / (photoW + gap)
+          )
+        )
+      : 1;
 
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
+    const copiesToDraw = useA4 ? totalCopies : 1;
 
-  // A4 page always WHITE
-  ctx.fillStyle = "#ffffff";
-  ctx.fillRect(0, 0, a4W, a4H);
+    for (let i = 0; i < copiesToDraw; i++) {
+      const row = Math.floor(i / columns);
+      const column = i % columns;
 
-  const img = await getSourceImage();
+      const photoX = useA4
+        ? pageMargin + column * (photoW + gap)
+        : 0;
 
-  // Image ko passport-photo box me fit karna
-  const scale = Math.max(
-    photoW / img.width,
-    photoH / img.height
-  );
+      const photoY = useA4
+        ? pageMargin + row * (photoH + gap)
+        : 0;
 
-  const drawW = img.width * scale * zoom;
-  const drawH = img.height * scale * zoom;
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(photoX, photoY, photoW, photoH);
+      ctx.clip();
 
-  const moveX = offsetX * (dpi / 100);
-  const moveY = offsetY * (dpi / 100);
+      ctx.fillStyle = getBg();
+      ctx.fillRect(photoX, photoY, photoW, photoH);
 
-  for (let i = 0; i < totalCopies; i++) {
-    const row = Math.floor(i / columns);
-    const column = i % columns;
+      const x = photoX + (photoW - drawW) / 2 + moveX;
+      const y = photoY + (photoH - drawH) / 2 + moveY;
 
-    // Photos pehle ki tarah LEFT se start hongi
-    const photoX =
-      pageMargin +
-      column * (photoW + gap);
+      ctx.drawImage(img, x, y, drawW, drawH);
+      ctx.restore();
+    }
 
-    // Photos TOP se start hongi
-    const photoY =
-      pageMargin +
-      row * (photoH + gap);
+    return canvas;
+  };
 
-    const x =
-      photoX +
-      (photoW - drawW) / 2 +
-      moveX;
-
-    const y =
-      photoY +
-      (photoH - drawH) / 2 +
-      moveY;
-
-    ctx.save();
-
-    // Photo box ke andar hi image rahe
-    ctx.beginPath();
-    ctx.rect(
-      photoX,
-      photoY,
-      photoW,
-      photoH
-    );
-    ctx.clip();
-
-    // Background sirf photo ke andar
-    ctx.fillStyle = getBg();
-
-    ctx.fillRect(
-      photoX,
-      photoY,
-      photoW,
-      photoH
-    );
-
-    // Photo draw
-    ctx.drawImage(
-      img,
-      x,
-      y,
-      drawW,
-      drawH
-    );
-
-    ctx.restore();
-  }
-
-  return canvas;
-};
-
-
-
-
+  const canvasToBlob = (
+    canvas: HTMLCanvasElement,
+    type = "image/jpeg"
+  ): Promise<Blob | null> =>
+    new Promise((resolve) => {
+      canvas.toBlob(
+        resolve,
+        type,
+        Math.max(0.1, Math.min(1, quality / 100))
+      );
+    });
 
   const processPreview = async () => {
     if (!file || !imageUrlRef.current) return;
@@ -327,24 +280,14 @@ export default function Passport() {
       setProcessing(true);
       setDownloaded(false);
 
-      const canvas = await createCanvas();
+      const canvas = await createCanvas(true);
+      const blob = await canvasToBlob(canvas);
 
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(
-          resolve,
-          "image/jpeg",
-          Math.max(0.1, Math.min(1, quality / 100))
-        )
-      );
-
-      if (!blob) {
-        throw new Error("Could not create preview");
-      }
+      if (!blob) throw new Error("Could not create preview");
 
       revokeUrl(previewUrlRef.current);
 
       const url = URL.createObjectURL(blob);
-
       previewUrlRef.current = url;
       setPreviewUrl(url);
     } catch (error) {
@@ -361,19 +304,12 @@ export default function Passport() {
       setProcessing(true);
       setDownloaded(false);
 
-      const canvas = await createCanvas();
+      // Copies = 1: passport-size photo.
+      // Copies > 1: A4 sheet with requested copies.
+      const canvas = await createCanvas(false);
+      const blob = await canvasToBlob(canvas);
 
-      const blob = await new Promise<Blob | null>((resolve) =>
-        canvas.toBlob(
-          resolve,
-          "image/jpeg",
-          Math.max(0.1, Math.min(1, quality / 100))
-        )
-      );
-
-      if (!blob) {
-        throw new Error("Could not create download");
-      }
+      if (!blob) throw new Error("Could not create download");
 
       const url = URL.createObjectURL(blob);
 
@@ -384,9 +320,11 @@ export default function Passport() {
           .replace(/^-|-$/g, "") || "passport-photo";
 
       const link = document.createElement("a");
-
       link.href = url;
-      link.download = `${baseName}-passport.jpg`;
+      link.download =
+        copies > 1
+          ? `${baseName}-passport-A4.jpg`
+          : `${baseName}-passport.jpg`;
 
       document.body.appendChild(link);
       link.click();
@@ -394,8 +332,8 @@ export default function Passport() {
 
       setDownloaded(true);
 
-      setTimeout(() => {
-        URL.revokeObjectURL(url);
+      window.setTimeout(() => {
+        revokeUrl(url);
       }, 3000);
     } catch (error) {
       console.error("Passport download error:", error);
@@ -412,22 +350,21 @@ export default function Passport() {
       setDownloaded(false);
 
       const blob = await removeBackground(imageUrlRef.current, {
-        output: {
-          format: "image/png",
-        },
+        output: { format: "image/png" },
       });
 
       const newUrl = URL.createObjectURL(blob);
 
       revokeUrl(imageUrlRef.current);
-
       imageUrlRef.current = newUrl;
 
       setImageUrl(newUrl);
       setFile(
-        new File([blob], file.name.replace(/\.[^/.]+$/, "") + ".png", {
-          type: "image/png",
-        })
+        new File(
+          [blob],
+          file.name.replace(/\.[^/.]+$/, "") + ".png",
+          { type: "image/png" }
+        )
       );
 
       setBackgroundRemoved(true);
@@ -435,7 +372,6 @@ export default function Passport() {
 
       revokeUrl(previewUrlRef.current);
       previewUrlRef.current = "";
-
       setPreviewUrl("");
     } catch (error) {
       console.error("Background removal error:", error);
@@ -467,7 +403,6 @@ export default function Passport() {
 
     setBg("white");
     setCustomColor("#ffffff");
-
     setRgbR(255);
     setRgbG(255);
     setRgbB(255);
@@ -498,16 +433,12 @@ export default function Passport() {
       {/* HEADER */}
       <header className="flex shrink-0 items-center justify-between border-b border-[#30363d] bg-[#20252b] px-4 py-3 gap-2">
         <button
-            type="button"
-            onClick={() => window.history.back()}
-            className=" rounded-lg border-1 px-1 py-0.5 text-sm text-gray-200 transition hover:bg-[#213553]"
-          >
-           <span className="text-[24px] font-bold leading-none">←</span>
-          </button>
-
-        {/*<h1 className="text-[12px] font-semibold">
-          Passport Photo
-        </h1>*/}
+          type="button"
+          onClick={() => window.history.back()}
+          className="rounded-lg border px-1 py-0.5 text-sm text-gray-200 transition hover:bg-[#213553]"
+        >
+          <span className="text-[24px] font-bold leading-none">←</span>
+        </button>
 
         <button
           type="button"
@@ -517,55 +448,41 @@ export default function Passport() {
           Reset
         </button>
 
+        <button
+          type="button"
+          disabled={!imageUrl || removingBackground}
+          onClick={removeBg}
+          title="Remove Background"
+          className={`flex h-9 shrink-0 items-center justify-center rounded-full border-2 px-3 text-[9px] font-bold ${
+            bg === "removed"
+              ? "border-[#f3ad61] bg-[#342b23] text-[#f3ad61]"
+              : "border-[#555] bg-[#151a20] text-white"
+          } disabled:opacity-50`}
+        >
+          {removingBackground ? "Removing..." : "Remove BG"}
+        </button>
 
-        {/* REMOVE BACKGROUND */}
-              <button
-                type="button"
-                disabled={removingBackground}
-                onClick={removeBg}
-                title="Remove Background"
-                className={`flex h-9 shrink-0 items-center justify-center rounded-full border-2 px-3 text-[9px] font-bold ${
-                  bg === "removed"
-                    ? "border-[#f3ad61] bg-[#342b23] text-[#f3ad61]"
-                    : "border-[#555] bg-[#151a20] text-white"
-                } disabled:opacity-50`}
-              >
-                {removingBackground
-                  ? "Removing..."
-                  : "Remove BG"}
-              </button>
-
-
-{/* DOWNLOAD */}
-<button
-  type="button"
-  disabled={!imageUrl || processing}
-  onClick={async () => {
-    await download();
-
-    setDownloaded(true);
-
-    setTimeout(() => {
-      setDownloaded(false);
-    }, 2000);
-  }}
-  className={`relative rounded-md border px-2 py-1.5 text-[9px] font-semibold transition-colors disabled:opacity-40 ${
-    downloaded
-      ? "border-green-500 bg-green-600 text-white"
-      : "border-[#30363d] bg-[#f3ad61] text-[#000000] font-bold hover:border-[#55534c] hover:text-black"
-  }`}
-  >
-  {processing ? (
-    <span className="absolute inset-0 flex items-center justify-center">
-      <span className="h-1.5 w-1.5 animate-spin rounded-full border-2 border-[#a8aaa5] border-t-transparent" />
-    </span>
-  ) : downloaded ? (
-    "✓Download"
-  ) : (
-    "Download"
-  )}
-</button>
-    </header>
+        <button
+          type="button"
+          disabled={!imageUrl || processing}
+          onClick={download}
+          className={`relative rounded-md border px-2 py-1.5 text-[9px] font-semibold transition-colors disabled:opacity-40 ${
+            downloaded
+              ? "border-green-500 bg-green-600 text-white"
+              : "border-[#30363d] bg-[#f3ad61] font-bold text-black hover:border-[#55534c]"
+          }`}
+        >
+          {processing ? (
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="h-1.5 w-1.5 animate-spin rounded-full border-2 border-[#a8aaa5] border-t-transparent" />
+            </span>
+          ) : downloaded ? (
+            "✓ Download"
+          ) : (
+            "Download"
+          )}
+        </button>
+      </header>
 
       {/* MAIN */}
       <main className="flex min-h-0 flex-1 flex-col items-center justify-center px-4 pb-3 pt-3">
@@ -581,17 +498,12 @@ export default function Passport() {
             {!imageUrl ? (
               <label className="flex h-full w-full cursor-pointer flex-col items-center justify-center gap-3 text-center">
                 <div className="text-6xl">📷</div>
-
                 <div>
-                  <div className="text-1g font-semibold">
-                    Select Photo
-                  </div>
-
+                  <div className="text-lg font-semibold">Select Photo</div>
                   <div className="mt-1 text-[10px] text-[#9ca3af]">
                     JPG, PNG or WEBP
                   </div>
                 </div>
-
                 <input
                   type="file"
                   accept="image/*"
@@ -603,20 +515,21 @@ export default function Passport() {
               <>
                 <div
                   className="absolute inset-0"
-                  style={{
-                    backgroundColor: getBg(),
-                  }}
+                  style={{ backgroundColor: getBg() }}
                 />
 
-                <img
-                  src={previewUrl || imageUrl}
-                  alt="Passport preview"
-                  className="relative h-full w-full object-cover"
-                  style={{
-                    transform: `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`,
-                    transformOrigin: "center center",
-                  }}
-                />
+               <img
+  src={previewUrl || imageUrl}
+  alt="Passport preview"
+  className="relative z-10 block h-full w-full"
+  style={{
+    objectFit: "cover",
+    transform: previewUrl
+      ? "none"
+      : `translate(${offsetX}px, ${offsetY}px) scale(${zoom})`,
+    transformOrigin: "center center",
+  }}
+/>
 
                 {processing && (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/50">
@@ -647,77 +560,59 @@ export default function Passport() {
       {/* CONTROLS */}
       <footer className="shrink-0 border-t border-[#282e35] bg-[#392c3a] px-1 py-2">
         <div className="flex flex-wrap items-center justify-center gap-2">
-          {/* SIZE */}
-          <div className="relative">
-            <button
-              type="button"
-              disabled={!imageUrl}
-              onClick={() =>
-                setPopup(popup === "size" ? null : "size")
-              }
-              className="rounded-md border border-[#30363d] bg-[#20252b] px-3 py-0.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] disabled:opacity-40"
-            > 📐 <br />
-              Size
-            </button>
-          </div>
+          <button
+            type="button"
+            disabled={!imageUrl}
+            onClick={() => setPopup(popup === "size" ? null : "size")}
+            className="rounded-md border border-[#30363d] bg-[#20252b] px-3 py-0.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] disabled:opacity-40"
+          >
+            📐 <br /> Size
+          </button>
 
-          {/* BACKGROUND */}
           <button
             type="button"
             disabled={!imageUrl}
             onClick={() =>
-              setPopup(
-                popup === "background" ? null : "background"
-              )
+              setPopup(popup === "background" ? null : "background")
             }
             className="rounded-md border border-[#30363d] bg-[#20252b] px-3.5 py-0.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] disabled:opacity-40"
           >
-            🎨 <br />
-            BG
+            🎨 <br /> BG
           </button>
 
-          {/* ADJUST */}
           <button
             type="button"
             disabled={!imageUrl}
-            onClick={() =>
-              setPopup(popup === "quality" ? null : "quality")
-            }
+            onClick={() => setPopup(popup === "quality" ? null : "quality")}
             className="rounded-md border border-[#30363d] bg-[#20252b] px-2 py-0.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] disabled:opacity-40"
-          > ⚙️ <br />
-            Adjust
+          >
+            ⚙️ <br /> Adjust
           </button>
 
-          {/* COPIES */}
           <button
             type="button"
             disabled={!imageUrl}
-            onClick={() =>
-              setPopup(popup === "copies" ? null : "copies")
-            }
+            onClick={() => setPopup(popup === "copies" ? null : "copies")}
             className="rounded-md border border-[#30363d] bg-[#20252b] px-2 py-0.5 text-[9px] font-semibold text-[#a8aaa5] hover:border-[#55534c] disabled:opacity-40"
-          > 📄<br />
-            Copies
+          >
+            📄 <br /> Copies
           </button>
 
-          
-          {/* APPLY */}
-          <button type="button"disabled={!imageUrl || processing}
-          onClick={processPreview}
-          className="rounded-md border border-[#f3ad61] bg-[#f3ad61] px-2 py-1.5 text-[9px] font-bold text-black disabled:opacity-40">
-          {processing ? (
-          <span className="inline-flex h-[12px] w-[12px] items-center justify-center align-middle">
-          <span className="h-1.5 w-1.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
-          </span>
-          ) : (
-          "Apply"
-          )}
+          <button
+            type="button"
+            disabled={!imageUrl || processing}
+            onClick={processPreview}
+            className="rounded-md border border-[#f3ad61] bg-[#f3ad61] px-2 py-1.5 text-[9px] font-bold text-black disabled:opacity-40"
+          >
+            {processing ? (
+              <span className="inline-flex h-[12px] w-[12px] items-center justify-center align-middle">
+                <span className="h-1.5 w-1.5 animate-spin rounded-full border-2 border-black border-t-transparent" />
+              </span>
+            ) : (
+              "Apply"
+            )}
           </button>
-
-
-
-
-      </div>
+        </div>
       </footer>
 
       {/* SIZE POPUP */}
@@ -725,10 +620,7 @@ export default function Passport() {
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-3 sm:items-center">
           <div className="w-full max-w-md rounded-xl border border-[#30363d] bg-[#20252b] p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-bold">
-                Photo Size
-              </span>
-
+              <span className="text-xs font-bold">Photo Size</span>
               <button
                 type="button"
                 onClick={() => setPopup(null)}
@@ -750,6 +642,7 @@ export default function Passport() {
                   type="button"
                   onClick={() => {
                     setPreset(id);
+                    setPreviewUrl("");
                     setPopup(null);
                   }}
                   className={`rounded-lg border px-2 py-2 text-left ${
@@ -758,10 +651,7 @@ export default function Passport() {
                       : "border-[#30363d] bg-[#151a20]"
                   }`}
                 >
-                  <div className="text-[10px] font-semibold">
-                    {item.name}
-                  </div>
-
+                  <div className="text-[10px] font-semibold">{item.name}</div>
                   <div className="mt-1 text-[9px] text-[#9ca3af]">
                     {item.w} × {item.h} mm
                   </div>
@@ -770,17 +660,17 @@ export default function Passport() {
 
               <button
                 type="button"
-                onClick={() => setPreset("custom")}
+                onClick={() => {
+                  setPreset("custom");
+                  setPreviewUrl("");
+                }}
                 className={`rounded-lg border px-2 py-2 text-left ${
                   preset === "custom"
                     ? "border-[#f3ad61] bg-[#342b23]"
                     : "border-[#30363d] bg-[#151a20]"
                 }`}
               >
-                <div className="text-[10px] font-semibold">
-                  Custom
-                </div>
-
+                <div className="text-[10px] font-semibold">Custom</div>
                 <div className="mt-2 grid grid-cols-2 gap-2">
                   <input
                     type="number"
@@ -788,32 +678,26 @@ export default function Passport() {
                     value={customW}
                     onChange={(e) => {
                       setPreset("custom");
-                      setCustomW(
-                        Math.max(1, Number(e.target.value) || 1)
-                      );
+                      setCustomW(Math.max(1, Number(e.target.value) || 1));
+                      setPreviewUrl("");
                     }}
                     className="w-full rounded border border-[#30363d] bg-[#0c1117] px-2 py-1 text-[10px] text-white outline-none"
                     placeholder="W"
                   />
-
                   <input
                     type="number"
                     min="1"
                     value={customH}
                     onChange={(e) => {
                       setPreset("custom");
-                      setCustomH(
-                        Math.max(1, Number(e.target.value) || 1)
-                      );
+                      setCustomH(Math.max(1, Number(e.target.value) || 1));
+                      setPreviewUrl("");
                     }}
                     className="w-full rounded border border-[#30363d] bg-[#0c1117] px-2 py-1 text-[10px] text-white outline-none"
                     placeholder="H"
                   />
                 </div>
-
-                <div className="mt-1 text-[8px] text-[#9ca3af]">
-                  mm
-                </div>
+                <div className="mt-1 text-[8px] text-[#9ca3af]">mm</div>
               </button>
             </div>
           </div>
@@ -825,10 +709,7 @@ export default function Passport() {
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-3 sm:items-center">
           <div className="w-full max-w-md rounded-xl border border-[#30363d] bg-[#20252b] p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-bold">
-                Background
-              </span>
-
+              <span className="text-xs font-bold">Background</span>
               <button
                 type="button"
                 onClick={() => setPopup(null)}
@@ -838,7 +719,6 @@ export default function Passport() {
               </button>
             </div>
 
-            {/* COLOR ROW */}
             <div className="flex gap-2 overflow-x-auto pb-2">
               {colorOptions.map((item) => (
                 <button
@@ -848,133 +728,53 @@ export default function Passport() {
                   onClick={() => {
                     setBg(item.id);
                     setBackgroundRemoved(false);
+                    setPreviewUrl("");
                   }}
                   className={`h-9 w-9 shrink-0 rounded-full border-2 ${
                     bg === item.id
                       ? "border-[#f3ad61]"
                       : "border-[#555]"
                   }`}
-                  style={{
-                    backgroundColor: item.color,
-                  }}
+                  style={{ backgroundColor: item.color }}
                 />
               ))}
-             
             </div>
 
-
-                                         {/* RGB */}
             <div className="mt-3 rounded-lg border border-[#30363d] bg-[#151a20] p-3">
-              <div className="mb-2 flex items-center justify-between">
-                {/*<span className="text-[10px] font-semibold">
-                  RGB Color
-                </span>*/}
-
-           {/* CUSTOM COLOR */}
-              <label
-                title="Custom RGB / Color"
-                className={`relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 ${
-                  bg === "custom"
-                    ? "border-[#f3ad61]"
-                    : "border-[#555]"
-                }`}
-                style={{
-                  backgroundColor: customColor,
-                }}>
-
-                <input
-                  type="color"
-                  value={customColor}
-                  onChange={(e) =>
-                    updateColor(e.target.value)
-                  }
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"/>
-
-                
-               <span className="pointer-events-none flex flex-col items-center justify-center text-[9px] font-bold text-black">
-               <span>🎨</span>
-               <span>RGB</span>
-              </span>
-              </label>
-
-
-                {/* REMOVE BACKGROUND */}
-              <button
-                type="button"
-                disabled={removingBackground}
-                onClick={removeBg}
-                title="Remove Background"
-                className={`flex h-9 shrink-0 items-center justify-center rounded-full border-2 px-3 text-[9px] font-bold ${
-                  bg === "removed"
-                    ? "border-[#f3ad61] bg-[#342b23] text-[#f3ad61]"
-                    : "border-[#555] bg-[#151a20] text-white"
-                } disabled:opacity-50`}
-              >
-                {removingBackground
-                  ? "Removing..."
-                  : "Remove BG"}
-              </button>
-
-                {/*<div
-                  className="h-6 w-6 rounded border border-[#555]"
-                  style={{
-                    backgroundColor: customColor,
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-3 gap-2">
-                <label className="text-[9px] text-[#9ca3af]">
-                  R
+              <div className="flex items-center justify-between">
+                <label
+                  title="Custom RGB / Color"
+                  className={`relative flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center overflow-hidden rounded-full border-2 ${
+                    bg === "custom"
+                      ? "border-[#f3ad61]"
+                      : "border-[#555]"
+                  }`}
+                  style={{ backgroundColor: customColor }}
+                >
                   <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgbR}
-                    onChange={(e) =>
-                      updateRgb(Number(e.target.value), rgbG, rgbB)
-                    }
-                    className="mt-1 w-full rounded border border-[#30363d] bg-[#0c1117] px-2 py-1.5 text-[10px] text-white outline-none"
+                    type="color"
+                    value={customColor}
+                    onChange={(e) => {
+                      updateColor(e.target.value);
+                      setPreviewUrl("");
+                    }}
+                    className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                   />
+                  <span className="pointer-events-none flex flex-col items-center justify-center text-[9px] font-bold text-black">
+                    <span>🎨</span>
+                    <span>RGB</span>
+                  </span>
                 </label>
 
-                <label className="text-[9px] text-[#9ca3af]">
-                  G
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgbG}
-                    onChange={(e) =>
-                      updateRgb(rgbR, Number(e.target.value), rgbB)
-                    }
-                    className="mt-1 w-full rounded border border-[#30363d] bg-[#0c1117] px-2 py-1.5 text-[10px] text-white outline-none"
-                  />
-                </label>
-
-                <label className="text-[9px] text-[#9ca3af]">
-                  B
-                  <input
-                    type="number"
-                    min="0"
-                    max="255"
-                    value={rgbB}
-                    onChange={(e) =>
-                      updateRgb(rgbR, rgbG, Number(e.target.value))
-                    }
-                    className="mt-1 w-full rounded border border-[#30363d] bg-[#0c1117] px-2 py-1.5 text-[10px] text-white outline-none"
-                  />
-                </label>
-              </div>
-
-              <div className="mt-2 flex items-center gap-2">
-                <input
-                  type="text"
-                  value={customColor}
-                  onChange={(e) => updateColor(e.target.value)}
-                  className="flex-1 rounded border border-[#30363d] bg-[#0c1117] px-2 py-1.5 text-[10px] text-white outline-none"
-                  placeholder="#ffffff"
-                />*/}
+                <button
+                  type="button"
+                  disabled={!imageUrl || removingBackground}
+                  onClick={removeBg}
+                  title="Remove Background"
+                  className="flex h-9 shrink-0 items-center justify-center rounded-full border-2 border-[#555] bg-[#151a20] px-3 text-[9px] font-bold text-white disabled:opacity-50"
+                >
+                  {removingBackground ? "Removing..." : "Remove BG"}
+                </button>
 
                 <button
                   type="button"
@@ -985,6 +785,7 @@ export default function Passport() {
                     setRgbB(255);
                     setCustomColor("#ffffff");
                     setBackgroundRemoved(false);
+                    setPreviewUrl("");
                   }}
                   className="rounded border border-[#30363d] px-2 py-1.5 text-[9px]"
                 >
@@ -1001,10 +802,7 @@ export default function Passport() {
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-3 sm:items-center">
           <div className="w-full max-w-md rounded-xl border border-[#30363d] bg-[#20252b] p-4 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-bold">
-                Copies
-              </span>
-
+              <span className="text-xs font-bold">Copies</span>
               <button
                 type="button"
                 onClick={() => setPopup(null)}
@@ -1016,34 +814,31 @@ export default function Passport() {
 
             <div className="mb-2 flex justify-between text-[10px]">
               <span>Number of copies</span>
-              <span className="font-bold text-[#f3ad61]">
-                {copies}
-              </span>
+              <span className="font-bold text-[#f3ad61]">{copies}</span>
             </div>
 
-            
-<div className="flex gap-2 overflow-x-auto pb-2">
-  {Array.from({ length: 30 }, (_, index) => {
-    const number = index + 1;
-
-    return (
-      <button
-        key={number}
-        type="button"
-        onClick={() => setCopies(number)}
-        className={`h-9 min-w-9 shrink-0 rounded-md border text-[10px] font-semibold ${
-          copies === number
-            ? "border-[#f3ad61] bg-[#f3ad61] text-black"
-            : "border-[#30363d] bg-[#151a20] text-[#a8aaa5] hover:border-[#55534c] hover:text-white"
-        }`}
-      >
-        {number}
-      </button>
-    );
-  })}
-</div>
-
-
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {Array.from({ length: 30 }, (_, index) => {
+                const number = index + 1;
+                return (
+                  <button
+                    key={number}
+                    type="button"
+                    onClick={() => {
+                      setCopies(number);
+                      setPreviewUrl("");
+                    }}
+                    className={`h-9 min-w-9 shrink-0 rounded-md border text-[10px] font-semibold ${
+                      copies === number
+                        ? "border-[#f3ad61] bg-[#f3ad61] text-black"
+                        : "border-[#30363d] bg-[#151a20] text-[#a8aaa5] hover:border-[#55534c] hover:text-white"
+                    }`}
+                  >
+                    {number}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}
@@ -1051,12 +846,9 @@ export default function Passport() {
       {/* ADJUST POPUP */}
       {popup === "quality" && (
         <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-3 sm:items-center">
-          <div className="w-full max-w-md rounded-xl border border-[#30363d] bg-[#20252b] pl-4 pr-4 pt-1 pb-2 shadow-2xl">
+          <div className="w-full max-w-md rounded-xl border border-[#30363d] bg-[#20252b] px-4 pb-2 pt-1 shadow-2xl">
             <div className="mb-3 flex items-center justify-between">
-              <span className="text-xs font-bold">
-                Adjust
-              </span>
-
+              <span className="text-xs font-bold">Adjust</span>
               <button
                 type="button"
                 onClick={() => setPopup(null)}
@@ -1066,68 +858,59 @@ export default function Passport() {
               </button>
             </div>
 
-            {/* QUALITY */}
             <div>
               <div className="mb-0 flex justify-between text-[10px]">
                 <span>Quality</span>
-                <span className="text-[#f3ad61]">
-                  {quality}%
-                </span>
+                <span className="text-[#f3ad61]">{quality}%</span>
               </div>
-
               <input
                 type="range"
                 min="40"
                 max="100"
                 value={quality}
-                onChange={(e) =>
-                  setQuality(Number(e.target.value))
-                }
+                onChange={(e) => setQuality(Number(e.target.value))}
                 className="w-full"
               />
             </div>
 
-            {/* ZOOM */}
             <div className="mt-2">
               <div className="mb-2 flex justify-between text-[10px]">
                 <span>Zoom</span>
-                <span className="text-[#f3ad61]">
-                  {zoom.toFixed(2)}×
-                </span>
+                <span className="text-[#f3ad61]">{zoom.toFixed(2)}×</span>
               </div>
-
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setZoom((value) =>
                       Math.max(0.5, Number((value - 0.05).toFixed(2)))
-                    )
-                  }
+                    );
+                    setPreviewUrl("");
+                  }}
                   className="h-8 w-8 rounded border border-[#30363d] bg-[#151a20]"
                 >
                   −
                 </button>
-
                 <input
                   type="range"
                   min="0.5"
                   max="3"
                   step="0.05"
                   value={zoom}
-                  onChange={(e) =>
-                    setZoom(Number(e.target.value))
-                  }
+                  onChange={(e) => {
+                    setZoom(Number(e.target.value));
+                    setPreviewUrl("");
+                  }}
                   className="flex-1"
                 />
-
                 <button
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
                     setZoom((value) =>
                       Math.min(3, Number((value + 0.05).toFixed(2)))
-                    )
-                  }
+                    );
+                    setPreviewUrl("");
+                  }}
                   className="h-8 w-8 rounded border border-[#30363d] bg-[#151a20]"
                 >
                   +
@@ -1135,67 +918,64 @@ export default function Passport() {
               </div>
             </div>
 
-            {/* POSITION */}
             <div className="mt-3">
-              <div className="mb-0 text-[10px]">
-                Position
-              </div>
-
+              <div className="mb-0 text-[10px]">Position</div>
               <div className="grid grid-cols-3 gap-2">
                 <div />
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setOffsetY((value) => value - 5)
-                  }
+                  onClick={() => {
+                    setOffsetY((value) => value - 5);
+                    setPreviewUrl("");
+                  }}
                   className="rounded border border-[#30363d] bg-[#151a20] py-1 text-xs"
                 >
                   ↑
                 </button>
-
                 <div />
 
                 <button
                   type="button"
-                  onClick={() =>
-                    setOffsetX((value) => value - 5)
-                  }
+                  onClick={() => {
+                    setOffsetX((value) => value - 5);
+                    setPreviewUrl("");
+                  }}
                   className="rounded border border-[#30363d] bg-[#151a20] py-1 text-xs"
                 >
                   ←
                 </button>
-
                 <button
                   type="button"
-                  onClick={resetPosition}
+                  onClick={() => {
+                    resetPosition();
+                    setPreviewUrl("");
+                  }}
                   className="rounded border border-[#f3ad61] bg-[#342b23] py-1 text-[9px] font-semibold text-[#f3ad61]"
                 >
                   Center
                 </button>
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setOffsetX((value) => value + 5)
-                  }
+                  onClick={() => {
+                    setOffsetX((value) => value + 5);
+                    setPreviewUrl("");
+                  }}
                   className="rounded border border-[#30363d] bg-[#151a20] py-1 text-xs"
                 >
                   →
                 </button>
 
                 <div />
-
                 <button
                   type="button"
-                  onClick={() =>
-                    setOffsetY((value) => value + 5)
-                  }
+                  onClick={() => {
+                    setOffsetY((value) => value + 5);
+                    setPreviewUrl("");
+                  }}
                   className="rounded border border-[#30363d] bg-[#151a20] py-1 text-xs"
                 >
                   ↓
                 </button>
-
                 <div />
               </div>
             </div>
@@ -1205,4 +985,3 @@ export default function Passport() {
     </div>
   );
 }
-
