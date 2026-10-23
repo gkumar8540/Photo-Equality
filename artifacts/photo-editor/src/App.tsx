@@ -2,7 +2,10 @@ import { App as CapacitorApp } from "@capacitor/app";
 import React from "react";
 import { useLocation } from "wouter";
 import { FileText } from "lucide-react";
-
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
+import { Route, Router as WouterRouter, Switch } from 'wouter';
+import { Capacitor } from '@capacitor/core';
+import logo from '../../images/logoe3.jpeg';
 
 
 import { Link } from "wouter";
@@ -15,18 +18,10 @@ import Passport from "./pages/Passport";
 import Reduce from "./pages/Reduce";
 import Increase from "./pages/Increase";
 import RemoveBg from "./pages/RemoveBg";
-import TimeTravel from "./pages/TimeTravel";
+import Editpro from "./pages/Editpro";
 import DocScanner from "./pages/DocScanner";
-
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type CSSProperties, type PointerEvent, type ReactNode } from 'react';
-import { Route, Router as WouterRouter, Switch } from 'wouter';
-import { Capacitor } from '@capacitor/core';
-import logo from '../../images/logoe3.jpeg';
-import { TopNavigation } from './components/navigation/TopNavigation';
-import BottomNavigationPage from './pages/bottom-navigation';
-import BreadcrumbNavigationPage from './pages/breadcrumb-navigation';
-import OldFuturePage from './pages/OldFuture';
-import TopNavigationPage from './pages/top-navigation';
+import OldNow from './pages/OldNow';
+import Mixer from './pages/Mixer';
 import PhotoEdit from "./pages/photoedit";
 
 import {
@@ -630,7 +625,7 @@ function PhotoEquality() {
       title: "Photo Edit Pro",
       subtitle: "Edit Like a Pro",
       icon: "🖼️",
-      path: "/images/Time-Travel",
+      path: "/images/Editpro",
     },
     {
       title: "Photo Mixer",
@@ -660,7 +655,7 @@ function PhotoEquality() {
       title: "TimeX",
       subtitle: "Past & Present",
       icon: "🕰️",
-      path: "/images/Time-Travel",
+      path: "/images/OldNow",
     },
     
     
@@ -862,21 +857,19 @@ function App() {
       <Switch>
         <Route path="/" component={PhotoEquality} />
         
-
-
         <Route path="/privacy-policy" component={PrivacyPolicy} />
         <Route path="/terms-conditions" component={TermsConditions} />
         <Route path="/disclaimer" component={Disclaimer} />
         <Route path="/contact-us" component={ContactUs} />
 
-        <Route path="/images/mixer" component={TopNavigationPage} />
-        <Route path="/images/sidebar" component={OldFuturePage} />      
+        <Route path="/images/mixer" component={Mixer} />
+        <Route path="/images/OldNow" component={OldNow} />      
         <Route path="/images/photoedit" component={PhotoEdit} />
         <Route path="/images/passport" component={Passport} />
         <Route path="/images/reduce" component={Reduce} />
         <Route path="/images/increase" component={Increase} />
         <Route path="/images/remove-bg" component={RemoveBg} />
-        <Route path="/images/Time-Travel" component={TimeTravel} />
+        <Route path="/images/Editpro" component={Editpro} />
         <Route path="/images/Doc-scanner"component={DocScanner}/>
 
         <Route component={NotFound} />

@@ -330,17 +330,21 @@ export default function Passport() {
       link.click();
       link.remove();
 
-      setDownloaded(true);
+setDownloaded(true);
 
-      window.setTimeout(() => {
-        revokeUrl(url);
-      }, 3000);
-    } catch (error) {
-      console.error("Passport download error:", error);
-    } finally {
-      setProcessing(false);
-    }
-  };
+window.setTimeout(() => {
+  setDownloaded(false);
+}, 3000);
+
+window.setTimeout(() => {
+  revokeUrl(url);
+}, 3000);
+} catch (error) {
+  console.error("Passport download error:", error);
+} finally {
+  setProcessing(false);
+}
+};
 
   const removeBg = async () => {
     if (!file || !imageUrlRef.current) return;
@@ -463,21 +467,18 @@ export default function Passport() {
         </button>
 
         <button
-          type="button"
-          disabled={!imageUrl || processing}
-          onClick={download}
-          className={`relative rounded-md border px-2 py-1.5 text-[9px] font-semibold transition-colors disabled:opacity-40 ${
+          type="button"disabled={!imageUrl || processing}onClick={download}
+          className={`relative w-24.5 rounded-md border  px-2 py-1.5 text-[9px] font-semibold transition-colors disabled:opacity-40 ${
             downloaded
               ? "border-green-500 bg-green-600 text-white"
               : "border-[#30363d] bg-[#f3ad61] font-bold text-black hover:border-[#55534c]"
-          }`}
-        >
+          }`}>
           {processing ? (
             <span className="absolute inset-0 flex items-center justify-center">
               <span className="h-1.5 w-1.5 animate-spin rounded-full border-2 border-[#a8aaa5] border-t-transparent" />
             </span>
           ) : downloaded ? (
-            "✓ Download"
+            "✓"
           ) : (
             "Download"
           )}

@@ -43,6 +43,10 @@ export default function PhotoEqualityEditor() {
   const imageRef = useRef<HTMLImageElement | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
 
+  const [downloadingFormat, setDownloadingFormat] = useState("");
+  const [downloadedJpg, setDownloadedJpg] = useState(false);
+  const [downloadedPng, setDownloadedPng] = useState(false);
+
   const [imageUrl, setImageUrl] = useState("");
   const [fileName, setFileName] = useState("photo-equality");
   const [activeTool, setActiveTool] = useState<Tool>("adjust");
@@ -233,26 +237,49 @@ export default function PhotoEqualityEditor() {
     loadSnapshot(history[next]);
   };
 
-  const download = (format: "png" | "jpeg" = "png") => {
-    const canvas = canvasRef.current;
-    if (!canvas || !hasImage) {
-      setMessage("Upload a photo before downloading.");
-      return;
+  
+const download = (format: "png" | "jpeg" = "png") => {
+  const canvas = canvasRef.current;
+
+  if (!canvas || !hasImage) {
+    setMessage("Upload a photo before downloading.");
+    return;
+  }
+
+  try {
+    setDownloadingFormat(format);
+
+    const mime = format === "jpeg" ? "image/jpeg" : "image/png";
+    const url = canvas.toDataURL(mime, 0.94);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${fileName || "photo-equality"}-edited.${format === "jpeg" ? "jpg" : "png"}`;
+
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    if (format === "jpeg") {
+      setDownloadedJpg(true);
+      setDownloadedPng(false);
+    } else {
+      setDownloadedPng(true);
+      setDownloadedJpg(false);
     }
-    try {
-      const mime = format === "jpeg" ? "image/jpeg" : "image/png";
-      const url = canvas.toDataURL(mime, 0.94);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `${fileName || "photo-equality"}-edited.${format === "jpeg" ? "jpg" : "png"}`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setMessage(`Your ${format.toUpperCase()} is ready to save.`);
-    } catch {
-      setMessage("Download failed. Try a smaller image or another browser.");
-    }
-  };
+
+    window.setTimeout(() => {
+      setDownloadedJpg(false);
+      setDownloadedPng(false);
+    }, 3000);
+
+    setMessage(`Your ${format.toUpperCase()} is ready to save.`);
+  } catch {
+    setMessage("Download failed. Try a smaller image or another browser.");
+  } finally {
+    setDownloadingFormat("");
+  }
+};
 
   const resetEdits = () => {
     if (!hasImage) return;
@@ -475,10 +502,7 @@ export default function PhotoEqualityEditor() {
             <button className="pe-secondary !px-3 !py-2 text-xs lg:hidden" onClick={() => fileInputRef.current?.click()}>Upload</button>
           </div>
           {panel()}
-          <div className="mt-5 grid grid-cols-2 gap-2 border-t border-slate-700 pt-4">
-            <button className="pe-secondary" onClick={resetEdits} disabled={!hasImage}>Reset all</button>
-            <button className="pe-primary" onClick={() => download("png")} disabled={!hasImage}>Download PNG</button>
-          </div>
+      
         </aside>
       </main>
 
@@ -486,8 +510,42 @@ export default function PhotoEqualityEditor() {
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3 px-3 sm:px-5 lg:px-6">
           <p className="hidden text-xs text-slate-400 sm:block">Photo-Equality · Your edits stay in this browser unless you choose to save them.</p>
           <div className="ml-auto flex gap-2">
-            <button className="pe-secondary !py-2 text-sm" onClick={() => download("jpeg")} disabled={!hasImage}>Download JPG</button>
-            <button className="pe-primary !py-2 text-sm" onClick={() => download("png")} disabled={!hasImage}>↓ Save PNG</button>
+ 
+        <div className="mt-1 grid grid-cols-3 items-stretch gap-2  border-slate-700 pt-0">
+        <button
+        className="pe-secondary min-w-0 w-full !px-1 !py-0 text-center text-xs leading-tight whitespace-normal break-words"
+        onClick={resetEdits}
+        disabled={!hasImage}>
+        Reset all
+        </button>
+
+       <button
+       className={`pe-primary min-w-0 w-full !px-1 !py-0 text-center text-xs leading-tight whitespace-normal break-words ${
+       downloadedJpg ? "!border-green-500 !bg-green-600 !text-white" : ""
+       }`}
+       onClick={() => download("jpeg")}
+       disabled={!hasImage || downloadingFormat !== ""}>
+       {downloadingFormat === "jpeg"
+      ? "Saving..."
+      : downloadedJpg
+        ? "✓"
+        : "Download JPG"}
+      </button>
+
+      <button
+      className={`pe-primary min-w-0 w-full !px-1 !py-0 text-center text-xs leading-tight whitespace-normal break-words ${
+      downloadedPng ? "!border-green-500 !bg-green-600 !text-white" : ""
+      }`}
+      onClick={() => download("png")}
+      disabled={!hasImage || downloadingFormat !== ""}>
+      {downloadingFormat === "png"
+      ? "Saving..."
+      : downloadedPng
+        ? "✓"
+        : "↓ Download PNG"}
+      </button>
+      </div>
+
           </div>
         </div>
       </footer>

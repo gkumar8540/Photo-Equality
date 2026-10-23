@@ -140,7 +140,9 @@ useEffect(() => {
 progress: (key: string, current: number, total: number) => {
   if (!total) return;
 
-  const ratio = Math.max(0, Math.min(1, current / total));
+  const ratio = total > 0? Math.round(Math.max(0, Math.min(1, current / total)) * 100
+    ) / 100
+    : 0;
   let percent = 0;
 
   // Model / WASM files loading
@@ -174,7 +176,7 @@ progress: (key: string, current: number, total: number) => {
   }
 
   // Progress ko peeche jaane se rokein
-  setProgress((prev) => Math.max(prev, Math.min(95, percent)));
+ setProgress((prev) => Math.round(Math.max(prev, Math.min(95, percent))));
 },
     });
 
@@ -572,17 +574,17 @@ progress: (key: string, current: number, total: number) => {
                   </span>
 
                   <span>
-                    {progress}%
+                  {Math.round(Number(progress) || 0)}%
                   </span>
                 </div>
 
                 <div className="h-2 overflow-hidden rounded-full bg-[#263449]">
                   <div
-                    className="h-full rounded-full bg-[#f3ad61] transition-all duration-300"
-                    style={{
-                      width: `${progress}%`,
-                    }}
-                  />
+                  className="h-full rounded-full bg-[#f3ad61] transition-all duration-300"
+                  style={{
+                  width: `${Math.round(Number(progress) || 0)}%`,
+                 }}
+                 />
                 </div>
 
                 {/*<p className="mt-2 text-xs text-gray-500">
@@ -861,11 +863,10 @@ progress: (key: string, current: number, total: number) => {
       type="button"
       disabled={!file || processing}
       onClick={processBackground}
-      className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-[#f3ad61] px-3 py-0 text-center text-xs font-semibold text-[#111827] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm"
-    >
+      className="flex min-w-0 flex-1 items-center justify-center rounded-lg bg-[#f3ad61] px-3 py-0 text-center text-xs font-semibold text-[#111827] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-40 sm:text-sm">
       {processing
-        ? `Removing.. ${progress}%`
-        : "Remove Background"}
+      ? `Removing.. ${Math.round(Number(progress) || 0)}%`
+      : "Remove Background"}
     </button>
 
   {/* Download */}

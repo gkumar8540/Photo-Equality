@@ -79,6 +79,7 @@ const frames = [
 export default function OldFuturePage() {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  
 
   const [template, setTemplate] = useState<TemplateId>("thennow");
   const [photos, setPhotos] = useState<PhotoItem[]>([]);
